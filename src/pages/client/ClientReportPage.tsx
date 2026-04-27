@@ -46,8 +46,38 @@ function ClientReportPage() {
     enabled: !!clientId,
   });
 
-  if (isLoading) return <div className="flex items-center justify-center h-full text-muted-foreground">로딩 중...</div>;
-  if (isError || !report) return <div className="flex items-center justify-center h-full text-destructive">리포트를 불러올 수 없습니다.</div>;
+  if (isLoading) return (
+    <div className="flex flex-col h-full bg-background overflow-y-auto px-8 py-8">
+      <div className="max-w-[900px] mx-auto w-full space-y-6 animate-pulse">
+        <div className="h-8 bg-muted rounded w-1/3" />
+        <div className="h-4 bg-muted rounded w-1/4" />
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4 mt-6">
+          <div className="h-5 bg-muted rounded w-1/5" />
+          <div className="grid grid-cols-4 gap-6">
+            {[1,2,3,4].map(i => <div key={i} className="space-y-2"><div className="h-3 bg-muted rounded w-12" /><div className="h-5 bg-muted rounded w-20" /></div>)}
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-6"><div className="h-[200px] bg-muted rounded" /></div>
+        <div className="bg-card border border-border rounded-xl p-6"><div className="h-[280px] bg-muted rounded" /></div>
+      </div>
+    </div>
+  );
+
+  if (isError || !report) return (
+    <div className="flex flex-col items-center justify-center h-full bg-background">
+      <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+        <span className="text-2xl">⚠</span>
+      </div>
+      <h3 className="text-lg font-semibold text-foreground mb-1">리포트를 불러올 수 없습니다</h3>
+      <p className="text-sm text-muted-foreground mb-4">데이터를 가져오는 중 오류가 발생했습니다.</p>
+      <button
+        onClick={() => navigate(-1)}
+        className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+      >
+        돌아가기
+      </button>
+    </div>
+  );
 
   const { summary, topicChart, emotionTrend, analysisText, positiveChanges, attentionAreas, topicPatterns, sessions } = report;
 

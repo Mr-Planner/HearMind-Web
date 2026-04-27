@@ -12,6 +12,7 @@ import plus from "../assets/sidebar/plus.svg";
 
 
 import { useShallow } from 'zustand/react/shallow';
+import { toast } from "../components/Toast";
 import { useAuthStore } from "../store/auth/authStore";
 import { useFolderStore } from "../store/folder/folderStore";
 
@@ -72,12 +73,12 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
         const trimmed = tempFolderName.trim();
 
         if (trimmed === "") {
-            alert("폴더 이름을 입력하세요");
+            toast.info("폴더 이름을 입력하세요");
             return;
         }
 
         if (folders.some(folder => folder.name === trimmed)) {
-            alert("중복된 폴더 이름입니다");
+            toast.error("중복된 폴더 이름입니다");
             return;
         }
 
@@ -88,7 +89,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
             setTempFolderName("");
         } catch (e) {
             console.error(e);
-            alert("폴더 추가 실패");
+            toast.error("폴더 추가 실패");
         }
     };
 
@@ -111,10 +112,10 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
 
     const saveRename = async (id: string | number) => {
         const trimmed = tempFolderName.trim();
-        if (!trimmed) return alert("폴더 이름을 입력하세요");
+        if (!trimmed) return toast.info("폴더 이름을 입력하세요");
 
         if (folders.some(folder => folder.name === trimmed && folder.id !== id))
-            return alert("중복된 이름입니다");
+            return toast.error("중복된 이름입니다");
 
         try {
             await storeUpdateFolder(Number(id), trimmed);
@@ -122,7 +123,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
             setTempFolderName("");
         } catch (e) {
             console.error(e);
-            alert("폴더 수정 실패");
+            toast.error("폴더 수정 실패");
         }
     };
 
@@ -138,7 +139,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
             setEditingId(null); 
         } catch (e) {
             console.error(e);
-            alert("폴더 삭제 실패");
+            toast.error("폴더 삭제 실패");
         }
     };
 

@@ -1,3 +1,14 @@
 /*전역 css 스타일*/
 @import "tailwindcss";
 @import "./global.css";
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

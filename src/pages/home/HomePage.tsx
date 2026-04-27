@@ -4,6 +4,7 @@ import 'dayjs/locale/ko';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { useAuthStore } from "../../store/auth/authStore";
+import { toast } from "../../components/Toast";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -12,28 +13,48 @@ import { useNavigate, useParams } from "react-router-dom";
 import SpeechItem from "../../components/CounselingItem";
 import { deleteSpeech, fetchSpeeches } from "../../service/speechApi";
 
+// 스켈레톤 카드 컴포넌트
+const SkeletonCard = () => (
+  <div className="flex w-full p-5 bg-card border border-border rounded-xl animate-pulse">
+    <div className="w-12 h-12 rounded-full bg-muted shrink-0 mr-4" />
+    <div className="flex flex-col flex-1 gap-3">
+      <div className="h-5 bg-muted rounded w-1/3" />
+      <div className="h-3 bg-muted rounded w-1/4" />
+      <div className="flex gap-3 mt-2">
+        <div className="h-6 bg-muted rounded w-16" />
+        <div className="h-4 bg-muted rounded w-24" />
+        <div className="h-4 bg-muted rounded w-16" />
+      </div>
+      <div className="flex gap-3 mt-2">
+        <div className="w-8 h-8 rounded-full bg-muted" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3 bg-muted rounded w-full" />
+          <div className="h-3 bg-muted rounded w-2/3" />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 function HomePage() {
 
     const navigate = useNavigate();
     
     const isLoggedIn = useAuthStore((state: any) => state.isLoggedIn);
     
-    const { folderId } = useParams(); // /speech, /speech/:folderId
-    const realFolderId = folderId ?? "all"; // 없을 경우 '모든 내담자'라고 가정
+    const { folderId } = useParams();
+    const realFolderId = folderId ?? "all";
 
     const queryClient = useQueryClient();
 
-    // function
     const handleUploadClick = () => {
         if (!isLoggedIn) {
-        navigate("/login");
+            navigate("/login");
         } else {
-        navigate("/upload");
+            navigate("/upload");
         }
     };
 
-    // 서버에서 SpeechList가져오기
-    // useQuery : GET(읽기) 전용
     const userId = useAuthStore((state: any) => state.userId);
 
     const {
@@ -42,31 +63,52 @@ function HomePage() {
         isError,
         error,
     } = useQuery({
-        queryKey: ["speeches", realFolderId, userId],       // 캐시 key (폴더별, 유저별로 캐시 분리)
-        queryFn: () => fetchSpeeches(realFolderId), // 실제 fetch 함수  
-        staleTime: 1000 * 60, // 1분까지는 fresh 데이터
+        queryKey: ["speeches", realFolderId, userId],
+        queryFn: () => fetchSpeeches(realFolderId),
+        staleTime: 1000 * 60,
+        enabled: isLoggedIn, // 로그인 시에만 데이터 fetch
     })
 
-    // useMutation : DELETE / POST / PUT 등의 데이터 변경 
     const deleteMutation = useMutation({
         mutationFn: (speechId: string | number) => deleteSpeech(speechId),
         onSuccess: () => {
-            // 이 폴더의 스피치 리스트만 다시 가져오기
             queryClient.invalidateQueries({
                 queryKey: ["speeches"],
             });
+            toast.success("상담 기록이 삭제되었습니다.");
         },
         onError: (error) => {
             console.error("삭제 실패:", error);
-            alert("스피치 삭제에 실패했습니다. 다시 시도해주세요.");
+            toast.error("삭제에 실패했습니다. 다시 시도해주세요.");
         }
     }); 
 
     const handleDeleteSpeech = (speechId: string | number) => {
-        if (window.confirm("정말로 이 스피치를 삭제하시겠습니까?")) {
+        if (window.confirm("정말로 이 상담 기록을 삭제하시겠습니까?")) {
             deleteMutation.mutate(speechId);
         }
     };
+
+    // 비로그인 상태 → 스켈레톤 UI
+    if (!isLoggedIn) {
+        return (
+            <main className="flex-1 overflow-y-auto px-16 py-10">
+                <div className="text-center py-16">
+                    <h2 className="text-2xl font-bold text-foreground mb-2">HearMind에 오신 것을 환영합니다</h2>
+                    <p className="text-muted-foreground mb-8">로그인 후 상담 기록을 확인하세요.</p>
+                    <button
+                        onClick={() => navigate('/login')}
+                        className="px-6 py-2.5 bg-primary text-white rounded-xl font-semibold hover:bg-primary/90 transition-colors cursor-pointer"
+                    >
+                        로그인하기
+                    </button>
+                </div>
+                <section className="mt-8 space-y-4 opacity-50 pointer-events-none">
+                    {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+                </section>
+            </main>
+        );
+    }
 
     return (
         <main className="flex-1 overflow-y-auto px-16 py-10">
@@ -86,29 +128,56 @@ function HomePage() {
                 </div>
             )}
 
-            {isLoading && <p>로딩 중...</p>}
-
-            {isError && (
-                <p className="text-destructive">에러: {error.message}</p>
+            {/* 로딩 중 스켈레톤 */}
+            {isLoading && (
+                <section className="mt-4 space-y-4">
+                    {[1, 2, 3].map(i => <SkeletonCard key={i} />)}
+                </section>
             )}
 
+            {/* 에러 상태 */}
+            {isError && (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                        <span className="text-2xl">⚠</span>
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-1">데이터를 불러올 수 없습니다</h3>
+                    <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
+                    <button
+                        onClick={() => queryClient.invalidateQueries({ queryKey: ["speeches"] })}
+                        className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+                    >
+                        다시 시도
+                    </button>
+                </div>
+            )}
+
+            {/* 데이터 표시 */}
             {speeches && (
                 <section className="mt-4 space-y-4">
-                    {speeches.map((speech: any) => (
-                        <SpeechItem
-                            key={speech.id}
-                            id={speech.id}
-                            title={speech.name}
-                            category={speech.category_name || "미분류"}
-                            date={dayjs.utc(speech.created_at).local().locale('ko').format('M.D (ddd) h:mm A')}
-                            duration={`${Math.floor(speech.duration_sec / 60)}분 ${Math.round(speech.duration_sec % 60)}초`}
-                            description={speech.preview_text}
-                            folderId={speech.category_id}
-                            clientName={speech.client_name}
-                            sessionNumber={speech.session_number}
-                            onDelete={handleDeleteSpeech}
-                        />
-                    ))}
+                    {speeches.length === 0 ? (
+                        <div className="flex flex-col items-center py-20 text-muted-foreground">
+                            <span className="text-4xl mb-4">📋</span>
+                            <p className="text-lg font-medium">아직 상담 기록이 없습니다</p>
+                            <p className="text-sm mt-1">+ 버튼을 눌러 첫 상담을 시작해보세요.</p>
+                        </div>
+                    ) : (
+                        speeches.map((speech: any) => (
+                            <SpeechItem
+                                key={speech.id}
+                                id={speech.id}
+                                title={speech.name}
+                                category={speech.category_name || "미분류"}
+                                date={dayjs.utc(speech.created_at).local().locale('ko').format('M.D (ddd) h:mm A')}
+                                duration={`${Math.floor(speech.duration_sec / 60)}분 ${Math.round(speech.duration_sec % 60)}초`}
+                                description={speech.preview_text}
+                                folderId={speech.category_id}
+                                clientName={speech.client_name}
+                                sessionNumber={speech.session_number}
+                                onDelete={handleDeleteSpeech}
+                            />
+                        ))
+                    )}
                 </section>
             )}
 

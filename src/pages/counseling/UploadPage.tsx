@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { FaCloudUploadAlt, FaFileAudio, FaTrash } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import SavePopup from '../../components/SavePopup';
+import { toast } from '../../components/Toast';
 import { uploadSpeech, BASE_URL } from '../../service/speechApi';
 import { useAuthStore } from '../../store/auth/authStore';
 
@@ -16,7 +17,7 @@ const UploadPage = () => {
   const handleFileSelect = (file: File) => {
     const allowedTypes = ['audio/webm', 'audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
     if (!allowedTypes.includes(file.type) && !file.name.match(/\.(webm|wav|mp3|ogg|m4a)$/i)) {
-      alert('지원되는 음성 파일 형식: webm, wav, mp3, ogg, m4a');
+      toast.error('지원되는 음성 파일 형식: webm, wav, mp3, ogg, m4a');
       return;
     }
     setSelectedFile(file);
@@ -71,7 +72,7 @@ const UploadPage = () => {
 
       const userId = useAuthStore.getState().userId;
       if (!userId) {
-        alert("로그인이 필요합니다.");
+        toast.error("로그인이 필요합니다.");
         return;
       }
 
@@ -115,7 +116,7 @@ const UploadPage = () => {
 
       setTimeout(() => {
         const newSpeechId = response.voice_id || response.id;
-        alert("성공적으로 저장되었습니다.");
+        toast.success("성공적으로 저장되었습니다.");
         setSelectedFile(null);
         setUploadProgress(0);
         navigate(`/${folderId}/${newSpeechId}`);
@@ -123,7 +124,7 @@ const UploadPage = () => {
 
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("저장에 실패했습니다.");
+      toast.error("저장에 실패했습니다. 다시 시도해주세요.");
       setUploadProgress(0);
     }
   };

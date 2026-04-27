@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaChevronDown, FaChevronUp, FaFolder, FaXmark } from "react-icons/fa6";
 import { useShallow } from 'zustand/react/shallow';
+import { toast } from './Toast';
 import { useFolderStore } from '../store/folder/folderStore';
 
 interface SavePopupProps {
@@ -35,7 +36,7 @@ const SavePopup = ({ isOpen, onClose, onSave, uploadProgress }: SavePopupProps) 
 
   const handleConfirm = () => {
     if (!speechTitle.trim()) {
-      alert("제목을 입력해주세요.");
+      toast.info("제목을 입력해주세요.");
       return;
     }
     // 0(모든 Speech) 또는 특정 폴더 ID 전송
