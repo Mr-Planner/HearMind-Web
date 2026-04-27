@@ -62,7 +62,7 @@ const SignUpPage = () => {
   return (
     <div className="h-full flex flex-col items-center pt-[25vh] bg-white px-4">
 
-      <h1 className="text-4xl font-bold mb-10">SpeechClear</h1>
+      <h1 className="text-4xl font-bold mb-10">HearMind</h1>
 
       <form
         onSubmit={handleSubmit}

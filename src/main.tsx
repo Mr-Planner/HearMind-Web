@@ -8,11 +8,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // useQuery, useMutation은 공통된 queryClient 인스턴스를 사용 
 const queryClient = new QueryClient(); 
 
-// BrowserRouter : basename(라우터) 정보 가져오기 위해
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>,
-)
+async function enableMocking() {
+  if (import.meta.env.MODE !== 'development') {
+    return
+  }
+ 
+  const { worker } = await import('./mocks/browser')
+ 
+  // `worker.start()` returns a Promise that resolves
+  // once the Service Worker is up and ready to intercept requests.
+  return worker.start({
+    onUnhandledRequest: 'bypass', // Ignore unhandled requests (like static assets)
+  })
+}
+
+enableMocking().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+      </QueryClientProvider>
+    </StrictMode>,
+  )
+})

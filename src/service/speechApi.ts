@@ -43,20 +43,6 @@ export async function uploadSpeech(formData: FormData, onUploadProgress?: (progr
   return res.data;
 }
 
-// 세그먼트 재녹음
-export async function reRecordSegment(segmentId: string | number, formData: FormData): Promise<any> {
-  const accessToken = useAuthStore.getState().accessToken;
-
-  const res = await axios.post(`${BASE_URL}/voice/segment/${segmentId}/re_record`, formData, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "multipart/form-data",
-    },
-    withCredentials: true,
-  });
-
-  return res.data;
-}
 
 // 스피치 상세 조회
 export async function fetchSpeechDetail(speechId: string | number): Promise<any> {
@@ -98,36 +84,4 @@ export async function fetchSpeeches(folderId?: string | number | null): Promise<
 
   const data = await res.json();
   return data.voices; // { voices: [...] } 형태에서 배열만 반환
-}
-
-// 스피치 합성 요청 (최종 제출)
-// 스피치 합성 요청 (최종 제출)
-export async function submitSpeechSynthesis(voiceId: string | number, selections: any): Promise<any> {
-  const accessToken = useAuthStore.getState().accessToken;
-
-  const res = await axios.post(`${BASE_URL}/voice/synthesize/${voiceId}`, selections, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    withCredentials: true,
-  });
-
-  return res.data;
-}
-
-// 결과 비교 조회
-export async function fetchCompareFeedback(voiceId: string | number): Promise<any> {
-  const accessToken = useAuthStore.getState().accessToken;
-  const res = await fetch(`${BASE_URL}/voice/${voiceId}/compare-feedback`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to fetch comparison");
-  }
-
-  return await res.json();
 }
