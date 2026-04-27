@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FaCloudUploadAlt, FaFileAudio, FaTrash } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
+import ClientSelectModal from '../../components/ClientSelectModal';
 import SavePopup from '../../components/SavePopup';
 import { toast } from '../../components/Toast';
 import { uploadSpeech, BASE_URL } from '../../service/speechApi';
 import { useAuthStore } from '../../store/auth/authStore';
+import type { Folder } from '../../store/folder/folderStore';
 
 const UploadPage = () => {
   const navigate = useNavigate();
@@ -14,10 +16,24 @@ const UploadPage = () => {
   const [isSavePopupOpen, setIsSavePopupOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // 내담자 선택 상태
+  const [showClientModal, setShowClientModal] = useState(true);
+  const [selectedClient, setSelectedClient] = useState<Folder | null>(null);
+
+  // 진입 시 항상 팝업 열기
+  useEffect(() => {
+    setShowClientModal(true);
+  }, []);
+
+  const handleClientSelect = (client: Folder) => {
+    setSelectedClient(client);
+    setShowClientModal(false);
+  };
+
   const handleFileSelect = (file: File) => {
     const allowedTypes = ['audio/webm', 'audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
     if (!allowedTypes.includes(file.type) && !file.name.match(/\.(webm|wav|mp3|ogg|m4a)$/i)) {
-      toast.error('지원되는 음성 파일 형식: webm, wav, mp3, ogg, m4a');
+      toast.error('지원되는 음성 파일 형식: WAV, MP3, WebM, OGG, M4A');
       return;
     }
     setSelectedFile(file);
@@ -81,19 +97,9 @@ const UploadPage = () => {
       const eventSource = new EventSource(`${BASE_URL}/voice/progress/${userId}`);
 
       const waitForConnection = new Promise<void>((resolve) => {
-        const timeoutId = setTimeout(() => {
-          resolve();
-        }, 5000);
-
-        eventSource.onopen = () => {
-          clearTimeout(timeoutId);
-          resolve();
-        };
-
-        eventSource.onerror = () => {
-          clearTimeout(timeoutId);
-          resolve();
-        };
+        const timeoutId = setTimeout(() => { resolve(); }, 5000);
+        eventSource.onopen = () => { clearTimeout(timeoutId); resolve(); };
+        eventSource.onerror = () => { clearTimeout(timeoutId); resolve(); };
       });
 
       eventSource.onmessage = (event) => {
@@ -104,9 +110,7 @@ const UploadPage = () => {
         }
       };
 
-      eventSource.onerror = () => {
-        eventSource.close();
-      };
+      eventSource.onerror = () => { eventSource.close(); };
 
       await waitForConnection;
       const response = await uploadSpeech(formData);
@@ -131,19 +135,44 @@ const UploadPage = () => {
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full bg-background relative">
-      {/* Header */}
-      <div className="absolute top-8 left-8">
+      {/* 내담자 선택 모달 */}
+      {showClientModal && (
+        <ClientSelectModal onSelect={handleClientSelect} />
+      )}
+
+      {/* 헤더 */}
+      <div className="absolute top-8 left-8 flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
           className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           ← 돌아가기
         </button>
+        {selectedClient && (
+          <>
+            <span className="text-muted-foreground/40">|</span>
+            <button
+              onClick={() => setShowClientModal(true)}
+              className="flex items-center gap-2 text-sm cursor-pointer group"
+            >
+              <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center">
+                <span className="text-[#8b5cf6] font-bold text-xs">{selectedClient.name.charAt(0)}</span>
+              </div>
+              <span className="font-semibold text-foreground">{selectedClient.name}</span>
+              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">(변경)</span>
+            </button>
+          </>
+        )}
       </div>
 
       <div className="w-full max-w-[520px] px-6">
         <h1 className="text-2xl font-bold text-foreground text-center mb-2">음성 파일 업로드</h1>
-        <p className="text-sm text-muted-foreground text-center mb-8">상담 녹음 파일을 업로드하면 AI가 자동으로 분석합니다.</p>
+        <p className="text-sm text-muted-foreground text-center mb-8">
+          {selectedClient
+            ? <><span className="font-semibold text-[#8b5cf6]">{selectedClient.name}</span> 님의 상담 녹음 파일을 업로드하세요.</>
+            : '상담 녹음 파일을 업로드하면 AI가 자동으로 분석합니다.'
+          }
+        </p>
 
         {/* Drag & Drop Zone */}
         <div
@@ -203,16 +232,16 @@ const UploadPage = () => {
         {/* Action Button */}
         <button
           onClick={handleStartAnalysis}
-          disabled={!selectedFile}
+          disabled={!selectedFile || !selectedClient}
           className={`
             w-full mt-6 py-3.5 rounded-xl font-semibold text-base transition-all
-            ${selectedFile
+            ${selectedFile && selectedClient
               ? 'bg-primary text-white hover:bg-primary/90 cursor-pointer shadow-[0_4px_12px_rgba(196,181,253,0.4)]'
               : 'bg-muted text-muted-foreground cursor-not-allowed'
             }
           `}
         >
-          분석 시작
+          {!selectedClient ? '내담자를 먼저 선택해주세요' : !selectedFile ? '파일을 선택해주세요' : '분석 시작'}
         </button>
       </div>
 
@@ -221,6 +250,8 @@ const UploadPage = () => {
         onClose={() => setIsSavePopupOpen(false)}
         onSave={onSave}
         uploadProgress={uploadProgress}
+        defaultFolderId={selectedClient?.id}
+        defaultTitle=""
       />
     </div>
   );

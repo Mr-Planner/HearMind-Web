@@ -9,10 +9,12 @@ interface SavePopupProps {
   onClose: () => void;
   onSave: (title: string, folderId: number) => void;
   uploadProgress: number;
+  defaultFolderId?: number;
+  defaultTitle?: string;
 }
 
 // todo 저장 후 redirect (완성된 녹음본으로) + 로딩률 보여주기 
-const SavePopup = ({ isOpen, onClose, onSave, uploadProgress }: SavePopupProps) => {
+const SavePopup = ({ isOpen, onClose, onSave, uploadProgress, defaultFolderId, defaultTitle }: SavePopupProps) => {
   const { folders, fetchFolders } = useFolderStore(
     useShallow((state) => ({
       folders: state.folders,
@@ -26,11 +28,11 @@ const SavePopup = ({ isOpen, onClose, onSave, uploadProgress }: SavePopupProps) 
   useEffect(() => {
     if (isOpen) {
       fetchFolders();
-      setSpeechTitle("");
-      setSelectedFolderId(0);
+      setSpeechTitle(defaultTitle ?? "");
+      setSelectedFolderId(defaultFolderId ?? 0);
       setIsFolderDropdownOpen(false);
     }
-  }, [isOpen, fetchFolders]);
+  }, [isOpen, fetchFolders, defaultFolderId, defaultTitle]);
 
   if (!isOpen) return null;
 

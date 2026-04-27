@@ -57,10 +57,10 @@ interface VoiceDetailResponse {
 }
 
 // --- 내담자(폴더) 데이터 ---
-const mockClients = [
-  { id: 1, name: '김민수', age: 19, totalSessions: 12, lastSession: '2024.12.15' },
-  { id: 2, name: '이지은', age: 22, totalSessions: 8, lastSession: '2024.12.12' },
-  { id: 3, name: '박준영', age: 25, totalSessions: 6, lastSession: '2024.12.10' },
+const mockClients: Array<{ id: number; name: string; age: number; gender: string; memo: string; totalSessions: number; lastSession: string }> = [
+  { id: 1, name: '김민수', age: 19, gender: '남성', memo: '수능 준비 중인 고3 학생. 완벽주의 성향 강함.', totalSessions: 12, lastSession: '2024.12.15' },
+  { id: 2, name: '이지은', age: 22, gender: '여성', memo: '신입 직장인. 대인관계 어려움 호소.', totalSessions: 8, lastSession: '2024.12.12' },
+  { id: 3, name: '박준영', age: 25, gender: '남성', memo: '취업 준비생. 면접 불안 심각.', totalSessions: 6, lastSession: '2024.12.10' },
 ];
 
 // --- 상담 기록 데이터 (내담자별) ---
@@ -151,7 +151,15 @@ export const handlers = [
   // 3. 폴더(내담자) 목록 조회 API
   http.get('http://localhost:8080/category', () => {
     return HttpResponse.json(
-      mockClients.map(c => ({ id: c.id, name: c.name }))
+      mockClients.map(c => ({
+        id: c.id,
+        name: c.name,
+        age: c.age,
+        gender: c.gender,
+        memo: c.memo,
+        totalSessions: c.totalSessions,
+        lastSession: c.lastSession,
+      }))
     );
   }),
 
@@ -160,10 +168,13 @@ export const handlers = [
     const body = await request.text();
     const params = new URLSearchParams(body);
     const name = params.get('name') || '새 내담자';
-    const newId = Math.max(...mockClients.map(c => c.id)) + 1;
-    const newClient = { id: newId, name, age: 0, totalSessions: 0, lastSession: '-' };
+    const age = parseInt(params.get('age') || '0', 10);
+    const gender = params.get('gender') || '';
+    const memo = params.get('memo') || '';
+    const newId = mockClients.length > 0 ? Math.max(...mockClients.map(c => c.id)) + 1 : 1;
+    const newClient = { id: newId, name, age, gender, memo, totalSessions: 0, lastSession: '-' };
     mockClients.push(newClient);
-    return HttpResponse.json({ id: newId, name });
+    return HttpResponse.json({ id: newId, name, age, gender, memo });
   }),
 
   // 5. 폴더(내담자) 수정 API

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
@@ -5,6 +6,7 @@ import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { useAuthStore } from "../../store/auth/authStore";
 import { toast } from "../../components/Toast";
+import ConfirmModal from "../../components/ConfirmModal";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -45,6 +47,8 @@ function HomePage() {
     const { folderId } = useParams();
     const realFolderId = folderId ?? "all";
 
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | number | null>(null);
+    
     const queryClient = useQueryClient();
 
     const handleUploadClick = () => {
@@ -84,8 +88,13 @@ function HomePage() {
     }); 
 
     const handleDeleteSpeech = (speechId: string | number) => {
-        if (window.confirm("정말로 이 상담 기록을 삭제하시겠습니까?")) {
-            deleteMutation.mutate(speechId);
+        setDeleteConfirmId(speechId);
+    };
+
+    const confirmDeleteSpeech = () => {
+        if (deleteConfirmId) {
+            deleteMutation.mutate(deleteConfirmId);
+            setDeleteConfirmId(null);
         }
     };
 
@@ -192,6 +201,17 @@ function HomePage() {
                     <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
             </button>
+
+            <ConfirmModal
+                isOpen={deleteConfirmId !== null}
+                onClose={() => setDeleteConfirmId(null)}
+                onConfirm={confirmDeleteSpeech}
+                title="상담 기록 삭제"
+                message="정말로 이 상담 기록을 삭제하시겠습니까? 삭제된 기록은 복구할 수 없습니다."
+                confirmText="삭제하기"
+                cancelText="취소"
+                type="danger"
+            />
             
         </main>
     )   
