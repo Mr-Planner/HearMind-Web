@@ -148,6 +148,7 @@ export const handlers = [
           segments: [
             {
               segment_id: 101,
+              speaker: '상담사',
               text: '안녕하세요 민수님. 오늘은 어떤 이야기를 나눠볼까요?',
               start: 0,
               segment_url: '',
@@ -157,6 +158,7 @@ export const handlers = [
             },
             {
               segment_id: 102,
+              speaker: '내담자',
               text: '안녕하세요... 요즘 학교 다니는 게 너무 힘들어요.',
               start: 10,
               segment_url: '',
@@ -166,6 +168,7 @@ export const handlers = [
             },
             {
               segment_id: 103,
+              speaker: '상담사',
               text: '많이 힘드신가 보네요. 어떤 부분이 가장 힘드신가요?',
               start: 25,
               segment_url: '',
@@ -175,6 +178,8 @@ export const handlers = [
             },
             {
               segment_id: 104,
+              speaker: '내담자',
+              isPeak: true,
               text: '모의고사 성적이 계속 안 나와서... 부모님도 계속 성적 얘기만 하시고...',
               start: 35,
               segment_url: '',
@@ -184,12 +189,44 @@ export const handlers = [
             },
             {
               segment_id: 105,
-              text: '네... 친구들은 다 잘하는 것 같은데 저만 뒤처지는 것 같아요.',
+              speaker: '상담사',
+              text: '성적 때문에 많이 스트레스를 받으시는군요.',
+              start: 45,
+              segment_url: '',
+              dB_list: generateMockDbList(20, -30),
+              metrics: null,
+              feedback: '',
+            },
+            {
+              segment_id: 106,
+              speaker: '내담자',
+              isPeak: true,
+              text: '네... 친구들은 다 잘하는 것 같은데 저만 뒤처지는 것 같아요. 매일 공부해도 성적이 안 오르니까 제가 뭘 하든 안 될 것 같아요.',
               start: 55,
               segment_url: '',
-              dB_list: generateMockDbList(40, -20),
-              metrics: { dB: 48.0, pitch_mean_hz: 210.0, rate_wpm: 140.2 },
-              feedback: '<슬픔 반응>\n"저만 뒤처지는 것 같아요" 발언 시 슬픔과 무기력감이 동시에 나타났습니다. 자기 효능감 저하 및 학습된 무기력 패턴이 관찰됩니다.\n\n<상담 제안>\n- 성적보다 학습 과정에 초점을 맞추는 인지 재구성 필요\n- 작은 성취 경험을 통한 자기 효능감 회복\n- 부모님과의 의사소통 개선 전략 논의',
+              dB_list: generateMockDbList(60, -10),
+              metrics: { dB: 58.0, pitch_mean_hz: 250.0, rate_wpm: 170.2 },
+              feedback: '<감정 피크 구간>\n"저만 뒤처지는 것 같아요" 발언 시 슬픔과 무기력감이 동시에 나타났습니다. 자기 효능감 저하 및 학습된 무기력 패턴이 관찰됩니다.\n\n<상담 제안>\n- 성적보다 학습 과정에 초점을 맞추는 인지 재구성 필요\n- 작은 성취 경험을 통한 자기 효능감 회복\n- 부모님과의 의사소통 개선 전략 논의',
+            },
+            {
+              segment_id: 107,
+              speaker: '상담사',
+              text: '노력해도 결과가 보이지 않으면 더 힘들 수 있어요. 그런 마음 충분히 이해해요.',
+              start: 70,
+              segment_url: '',
+              dB_list: generateMockDbList(30, -30),
+              metrics: null,
+              feedback: '',
+            },
+            {
+              segment_id: 108,
+              speaker: '내담자',
+              text: '감사합니다... 선생님이 이해해주시니까 조금 나은 것 같아요.',
+              start: 85,
+              segment_url: '',
+              dB_list: generateMockDbList(30, -25),
+              metrics: { dB: 42.0, pitch_mean_hz: 200.0, rate_wpm: 130.2 },
+              feedback: '<일반 반응>\n내담자가 상담사의 공감에 긍정적으로 반응하며 안정을 찾고 있습니다.',
             }
           ]
         }

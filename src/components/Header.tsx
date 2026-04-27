@@ -20,7 +20,7 @@ function Header() {
     };
 
     return (
-        <header className="flex justify-between items-center w-full bg-white px-6 py-2 border-b border-gray-300">
+        <header className="flex justify-between items-center w-full bg-background px-6 py-2 border-b border-border text-foreground">
             <Link to="/" >
                 <span className="text-[32px] font-bold">HearMind</span>
             </Link>

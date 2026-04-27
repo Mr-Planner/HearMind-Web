@@ -127,8 +127,8 @@ const AnalysisPage = () => {
       {
         label: 'Original dB',
         data: dBList.map((val: any, i: number) => ({ x: i * originalInterval, y: val })),
-        borderColor: '#7DCC74',
-        backgroundColor: 'rgba(125, 204, 116, 0.1)',
+        borderColor: '#c4b5fd',
+        backgroundColor: 'rgba(196, 181, 253, 0.1)',
         tension: 0.4,
         pointRadius: 0,
         pointHoverRadius: 4,
@@ -238,12 +238,12 @@ const AnalysisPage = () => {
   if (!speech) return <div className="p-8">데이터가 없습니다.</div>;
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      <header className="px-8 py-6 border-b border-gray-200 flex justify-between items-start">
+    <div className="flex flex-col h-full bg-background text-foreground">
+      <header className="px-8 py-6 border-b border-border flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{speech.voice_name}</h1>
-          <div className="flex items-center gap-4 text-gray-500 text-sm">
-            <span className="bg-gray-100 px-2 py-1 rounded text-gray-700 font-medium">
+          <h1 className="text-3xl font-bold mb-2">{speech.voice_name}</h1>
+          <div className="flex items-center gap-4 text-muted-foreground text-sm">
+            <span className="bg-secondary px-2 py-1 rounded text-secondary-foreground font-medium">
               {speech.category_name || "미분류"}
             </span>
             <span>{formattedDate}</span>
@@ -253,7 +253,7 @@ const AnalysisPage = () => {
         <div className="flex gap-3">
           <button 
             onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-bold transition-colors cursor-pointer"
+            className="px-4 py-2 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-lg font-bold transition-colors cursor-pointer"
           >
             목록으로
           </button>
@@ -261,43 +261,72 @@ const AnalysisPage = () => {
       </header>
 
       <main className="flex flex-1 overflow-hidden">
-        <section className="w-1/2 border-r border-gray-200 overflow-y-auto p-8">
+        <section className="w-1/2 border-r border-border overflow-y-auto p-8">
           <div className="space-y-8">
-            <div className="flex justify-between items-center mb-4">
-                 <h2 className="text-2xl font-bold text-gray-800">Script</h2>
+            <div className="flex justify-between items-center mb-6">
+                 <h2 className="text-2xl font-bold">상담 대화 내용</h2>
                  <button 
                      onClick={() => {
                         playAudio(currentSegment.segment_url, currentSegmentIndex, true);
                      }}
-                     className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg font-bold text-sm transition-colors cursor-pointer"
+                     className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg font-bold text-sm transition-colors cursor-pointer"
                  >
                      <FaPlay size={12} />
                      <span>전체 재생</span>
                  </button>
             </div>
             {scripts.map((script: any, scriptIdx: number) => (
-              <div key={scriptIdx}>
-                <h3 className="text-lg font-bold text-gray-800 mb-3">{script.part}</h3>
-                <div className="space-y-2">
+              <div key={scriptIdx} className="flex flex-col">
+                <div className="flex justify-center mb-8">
+                    <span className="px-5 py-1.5 bg-muted text-muted-foreground text-sm font-medium rounded-full">
+                        {script.part}
+                    </span>
+                </div>
+                <div className="space-y-6">
                   {script.segments.map((seg: any) => {
                     const isCurrent = currentSegment?.segment_id === seg.segment_id;
+                    const isCounselor = seg.speaker === '상담사';
+                    const isPeak = seg.isPeak;
+
                     return (
-                      <p 
+                      <div 
                         key={seg.segment_id} 
-                        className={`text-gray-700 leading-relaxed p-2 rounded cursor-pointer transition-colors
-                          ${isCurrent ? 'bg-red-50 border-l-4 border-red-400 font-medium' : 'hover:bg-gray-50'}
-                        `}
-                        onClick={() => {
-                            const idx = segments.findIndex((s: any) => s.segment_id === seg.segment_id);
-                            if (idx !== -1) {
-                              isAutoPlayingRef.current = true;
-                              setCurrentSegmentIndex(idx);
-                              playAudio(seg.segment_url, idx, false);
-                            }
-                        }}
+                        className={`flex flex-col ${isCounselor ? 'items-start' : 'items-end'}`}
                       >
-                        {seg.text}
-                      </p>
+                        <span className="text-xs text-muted-foreground mb-1.5 px-1">
+                            {seg.speaker}
+                        </span>
+                        <div 
+                            className={`relative max-w-[85%] p-4 rounded-xl cursor-pointer transition-all duration-200
+                              ${isCurrent ? 'ring-2 ring-primary ring-offset-2' : 'hover:opacity-90'}
+                              ${isPeak 
+                                ? 'bg-destructive/5 border border-destructive/20 rounded-tr-sm shadow-sm' 
+                                : (isCounselor ? 'bg-muted/50 rounded-tl-sm' : 'bg-primary/10 rounded-tr-sm')
+                              }
+                            `}
+                            onClick={() => {
+                                const idx = segments.findIndex((s: any) => s.segment_id === seg.segment_id);
+                                if (idx !== -1) {
+                                  isAutoPlayingRef.current = true;
+                                  setCurrentSegmentIndex(idx);
+                                  playAudio(seg.segment_url, idx, false);
+                                }
+                            }}
+                        >
+                            {isPeak && (
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+                                    </div>
+                                    <span className="text-xs font-bold text-destructive tracking-wide">감정 피크 구간</span>
+                                </div>
+                            )}
+                            <p className={`leading-relaxed text-[15px] ${isPeak ? 'text-foreground font-medium' : 'text-foreground'}`}>
+                                {seg.text}
+                            </p>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -306,9 +335,9 @@ const AnalysisPage = () => {
           </div>
         </section>
 
-        <section className="w-1/2 flex flex-col bg-gray-50 h-full">
+        <section className="w-1/2 flex flex-col bg-muted/30 h-full">
           {totalValidSegments === 0 ? (
-             <div className="flex items-center justify-center h-full text-gray-500 text-lg font-medium p-8">
+             <div className="flex items-center justify-center h-full text-muted-foreground text-lg font-medium p-8">
                  분석 결과가 없습니다.
              </div>
           ) : (
@@ -317,17 +346,17 @@ const AnalysisPage = () => {
             <button 
               onClick={handlePrev} 
               disabled={currentValidIndex <= 0}
-              className="p-2 text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
             >
               <FaChevronLeft size={20} />
             </button>
-            <span className="text-2xl font-bold text-gray-800">
+            <span className="text-2xl font-bold text-foreground">
               {currentValidIndex !== -1 ? currentValidIndex + 1 : "0"} / {totalValidSegments}
             </span>
             <button 
               onClick={handleNext} 
               disabled={currentValidIndex === -1 || currentValidIndex >= totalValidSegments - 1}
-              className="p-2 text-gray-500 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
             >
               <FaChevronRight size={20} />
             </button>
@@ -336,11 +365,11 @@ const AnalysisPage = () => {
           {currentSegment ? (
             <>
               <div className="flex-1 flex flex-col overflow-hidden px-8">
-              <div className="bg-white border border-gray-200 rounded-xl h-48 mb-4 p-4 shadow-sm relative w-full shrink-0">
+              <div className="bg-card border border-border rounded-xl h-48 mb-4 p-4 shadow-sm relative w-full shrink-0">
                 {dBList.length > 0 ? (
                     <Line data={chartData} options={chartOptions} />
                 ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
                         데이터가 없습니다.
                     </div>
                 )}
@@ -348,26 +377,26 @@ const AnalysisPage = () => {
 
               <div className="mb-4 shrink-0">
                 <div className="flex items-center justify-between mb-4">
-                     <h3 className="text-lg font-bold text-gray-900">분석 결과</h3>
+                     <h3 className="text-lg font-bold">분석 결과</h3>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
-                    <p className="text-sm text-gray-500 mb-1">목소리 크기</p>
-                    <p className="text-xl font-bold text-gray-900">
+                    <div className="bg-card p-3 rounded-xl shadow-sm border border-border text-center">
+                    <p className="text-sm text-muted-foreground mb-1">목소리 크기</p>
+                    <p className="text-xl font-bold text-card-foreground">
                         {displayMetrics?.dB ? Number(displayMetrics.dB).toFixed(2) : 0} 
                         <span className="text-sm font-normal">dB</span>
                     </p>
                     </div>
-                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
-                    <p className="text-sm text-gray-500 mb-1">목소리 높낮이</p>
-                    <p className="text-xl font-bold text-gray-900">
+                    <div className="bg-card p-3 rounded-xl shadow-sm border border-border text-center">
+                    <p className="text-sm text-muted-foreground mb-1">목소리 높낮이</p>
+                    <p className="text-xl font-bold text-card-foreground">
                         {displayMetrics?.pitch_mean_hz ? Number(displayMetrics.pitch_mean_hz).toFixed(2) : 0}
                         <span className="text-sm font-normal">Hz</span>
                     </p>
                     </div>
-                    <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
-                    <p className="text-sm text-gray-500 mb-1">말하기 속도</p>
-                    <p className="text-xl font-bold text-gray-900">
+                    <div className="bg-card p-3 rounded-xl shadow-sm border border-border text-center">
+                    <p className="text-sm text-muted-foreground mb-1">말하기 속도</p>
+                    <p className="text-xl font-bold text-card-foreground">
                         {displayMetrics?.rate_wpm ? Number(displayMetrics.rate_wpm).toFixed(2) : 0}
                         <span className="text-sm font-normal">WPM</span>
                     </p>
@@ -375,12 +404,12 @@ const AnalysisPage = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-4 flex-1 flex flex-col min-h-0">
-                <div className="px-6 py-4 border-b border-gray-100 flex-none bg-white rounded-t-xl">
-                    <h3 className="text-lg font-bold text-gray-900">상세 분석</h3>
+              <div className="bg-card rounded-xl shadow-sm border border-border mb-4 flex-1 flex flex-col min-h-0">
+                <div className="px-6 py-4 border-b border-border flex-none bg-card rounded-t-xl">
+                    <h3 className="text-lg font-bold text-card-foreground">상세 분석</h3>
                 </div>
                 <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                    <div className="text-gray-700 leading-relaxed text-sm">
+                    <div className="text-foreground leading-relaxed text-sm">
                     {(() => {
                         const text = displayFeedback || "분석 내용이 없습니다.";
                         if (!text) return null;
@@ -389,7 +418,7 @@ const AnalysisPage = () => {
                         if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
                             const isFirst = index === 0;
                             return (
-                                <h4 key={index} className={`font-bold text-gray-900 mb-2 text-base ${isFirst ? 'mt-0' : 'mt-4'}`}>
+                                <h4 key={index} className={`font-bold text-card-foreground mb-2 text-base ${isFirst ? 'mt-0' : 'mt-4'}`}>
                                     {trimmed.replace(/[<>]/g, '')}
                                </h4>
                             );
@@ -404,7 +433,7 @@ const AnalysisPage = () => {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500 text-lg font-medium p-8">
+            <div className="flex items-center justify-center h-full text-muted-foreground text-lg font-medium p-8">
               선택된 문장이 없습니다.
             </div>
           )}

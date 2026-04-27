@@ -75,11 +75,11 @@ function HomePage() {
             {isLoading && <p>로딩 중...</p>}
 
             {isError && (
-                <p className="text-red-500">에러: {error.message}</p>
+                <p className="text-destructive">에러: {error.message}</p>
             )}
 
             {speeches && (
-                <section className="mt-6 border-t border-gray-200 space-y-2">
+                <section className="mt-4 space-y-4">
                     {speeches.map((speech: any) => (
                         <SpeechItem
                             key={speech.id}
@@ -97,10 +97,15 @@ function HomePage() {
             )}
 
             <button 
-                className="fixed bottom-8 right-8 z-50 cursor-pointer transition-all duration-300 hover:scale-110 hover:brightness-90" 
+                className="fixed bottom-8 right-8 z-50 cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-primary/90
+                           w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(196,181,253,0.5)]" 
                 onClick={handleRecordingClick}
+                aria-label="녹음 시작"
             >
-                <img src={recording} alt = "녹음 시작" className="drop-shadow-md"/>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
             </button>
             
         </main>

@@ -8,7 +8,7 @@ import folderIcon from "../assets/sidebar/folder.svg";
 import hideside from "../assets/sidebar/hideside.svg";
 import overflowMenu from "../assets/sidebar/overflow-menu.svg";
 import plus from "../assets/sidebar/plus.svg";
-import setting from "../assets/sidebar/setting.svg";
+
 
 
 import { useShallow } from 'zustand/react/shallow';
@@ -145,7 +145,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
 
     // 상태 적용
     return (
-        <aside className="flex flex-col bg-gray-100 w-[250px] h-full relative">
+        <aside className="flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border w-[250px] h-full relative">
             <div className="flex justify-end p-2">
             <button className = "hover:bg-gray-300 rounded cursor-pointer" onClick={handleToggleSideBar}>
                     <img src = {hideside} alt = "사이드바 닫기"></img>
@@ -157,17 +157,17 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                     <li className="flex flex-col gap-2 ">
                         <div className="grid grid-cols-[1fr_auto_auto] items-center w-full h-9 pl-2 pr-0.5">
                             <div 
-                                className="flex gap-1.5 items-center cursor-pointer hover:bg-gray-200 rounded px-1 py-0.5"
+                                className="flex gap-1.5 items-center cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded px-1 py-0.5"
                                 onClick={() => handleNavigation("/")}
                             >
                                 <img src = {archive}></img>
                                 <span>모든 내담자</span>
                             </div>
                             <div className = "flex justify-center gap-0.5">
-                                <button className = "hover:bg-gray-300 rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick = {addFolder} disabled = {addingId != null}>
+                                <button className = "hover:bg-sidebar-accent rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick = {addFolder} disabled = {addingId != null}>
                                     <img src = {plus} alt = "폴더 추가"></img>
                                 </button>
-                                <button className = "hover:bg-gray-300 rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick = {toggleFolders}>
+                                <button className = "hover:bg-sidebar-accent rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick = {toggleFolders}>
                                     <img src = {isFolderOpen ? angleUp : angleRight} alt = "폴더 열기/닫기"></img>
                                 </button> 
                             </div>
@@ -178,12 +178,12 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                             {isFolderOpen && (
                                 <>
                                     {addingId && (
-                                        <li className="flex items-center w-full px-0.5 py-1 min-h-8 cursor-pointer hover:bg-gray-200">
+                                        <li className="flex items-center w-full px-0.5 py-1 min-h-8 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                                             <img src={folderIcon} className="shrink-0 mr-2" alt = "폴더"/>
                                             <div className="flex items-center gap-2 flex-1 overflow-hidden">
                                                 <input
                                                     autoFocus
-                                                    className="border rounded px-1 text-sm min-w-[100px] max-w-[150px] shrink"
+                                                    className="appearance-none shadow-none border border-sidebar-border bg-background text-foreground rounded px-2 py-0.5 text-sm min-w-[100px] max-w-[150px] shrink focus:outline-none focus:border-primary transition-colors"
                                                     value={tempFolderName}
                                                     onChange={(e) => setTempFolderName(e.target.value)}
                                                     placeholder="폴더 이름"
@@ -198,13 +198,13 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                                 />
                                                 <div className="flex gap-1 shrink-0">
                                                     <button
-                                                        className="text-blue-600 text-xs cursor-pointer hover:bg-gray-300 rounded"
+                                                        className="text-primary text-xs cursor-pointer hover:bg-sidebar-accent rounded px-1"
                                                         onClick={saveFolderName}
                                                     >
                                                     저장
                                                     </button>
                                                     <button
-                                                        className="text-gray-500 text-xs cursor-pointer hover:bg-gray-300 rounded"
+                                                        className="text-muted-foreground text-xs cursor-pointer hover:bg-sidebar-accent rounded px-1"
                                                         onClick={cancelFolderName}
                                                     >
                                                     취소
@@ -226,7 +226,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                                 <div className="flex items-center gap-2 flex-1 overflow-hidden">
                                                 <input
                                                     autoFocus
-                                                    className="border rounded px-1 text-sm min-w-[100px] max-w-[150px] shrink"
+                                                    className="appearance-none shadow-none border border-sidebar-border bg-background text-foreground rounded px-2 py-0.5 text-sm min-w-[100px] max-w-[150px] shrink focus:outline-none focus:border-primary transition-colors"
                                                     value={tempFolderName}
                                                     onChange={(e) => setTempFolderName(e.target.value)}
                                                     onKeyDown={(e) => {
@@ -236,13 +236,13 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                                 />
                                                 <div className="flex gap-1 shrink-0">
                                                     <button
-                                                    className="text-blue-600 text-xs hover:bg-gray-300 rounded"
+                                                    className="text-primary text-xs hover:bg-sidebar-accent rounded px-1"
                                                     onClick={() => saveRename(folder.id)}
                                                     >
                                                     저장
                                                     </button>
                                                     <button
-                                                    className="text-gray-500 text-xs hover:bg-gray-300 rounded"
+                                                    className="text-muted-foreground text-xs hover:bg-sidebar-accent rounded px-1"
                                                     onClick={cancelRename}
                                                     >
                                                     취소
@@ -265,7 +265,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                         return (
                                             <li
                                                 key={folder.id}
-                                                className="flex items-center w-full px-0.5 py-1 min-h-8 cursor-pointer hover:bg-gray-200"
+                                                className="flex items-center w-full px-0.5 py-1 min-h-8 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                                                 onClick={() => {
                                                     if (!isRenaming && !isMenuOpen) {
                                                         navigate(`/${folder.id}`); // 폴더 이동 
@@ -280,7 +280,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
 
                                                     {!isRenaming && (
                                                     <button
-                                                        className="hover:bg-gray-300 rounded cursor-pointer px-2 flex items-center justify-center h-[75%]"
+                                                        className="hover:bg-sidebar-accent rounded cursor-pointer px-2 flex items-center justify-center h-[75%]"
 
                                                         onClick={(e) => {
                                                         e.stopPropagation();   // 해당 폴더이름으로 이동 방지
@@ -294,17 +294,17 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                                     {isMenuOpen && (
                                                     <div
                                                         className="absolute top-full right-0 mt-1 z-50 flex flex-col translate-x-[55px] -translate-y-0.5
-                                                                bg-gray-200 border shadow-sm rounded text-sm w-[60px]"
+                                                                bg-popover text-popover-foreground border border-border shadow-sm rounded text-sm w-[60px]"
                                                         onClick={(e) => e.stopPropagation()} //  해당 폴더이름으로 이동 방지
                                                     >
                                                         <button
-                                                            className="px-2 py-1 hover:bg-gray-300 cursor-pointer"
+                                                            className="px-2 py-1 hover:bg-accent hover:text-accent-foreground cursor-pointer"
                                                             onClick={() => startRename(folder.id, folder.name)}
                                                         >
                                                         수정
                                                         </button>
                                                         <button
-                                                            className="px-2 py-1 hover:bg-gray-300 cursor-pointer"
+                                                            className="px-2 py-1 hover:bg-destructive hover:text-destructive-foreground cursor-pointer"
                                                             onClick={() => deleteFolder(folder.id)}
                                                         >
                                                         삭제
@@ -324,19 +324,7 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
 
                 </ul>
 
-                <ul className="px-4 absolute bottom-5 left-0 w-full">
-                    <li className="grid grid-cols-[1fr_auto_auto] items-center w-full h-9 px-2">
-                        <div
-                            onClick={() => handleNavigation("/setting")}
-                            className="flex gap-1.5 items-center min-h-8 hover:bg-gray-200 rounded cursor-pointer"
-                        >
-                            <img src={setting} alt="설정" />
-                            <span>설정</span>
-                        </div>
-                        <span></span>
-                        <span></span>
-                    </li>
-                </ul>
+
             </nav>
 
            

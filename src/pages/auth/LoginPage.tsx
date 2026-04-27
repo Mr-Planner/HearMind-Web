@@ -39,7 +39,7 @@ const LoginPage = () => {
     };
 
     return (
-      <div className="h-full flex flex-col items-center pt-[25vh] bg-white px-4">
+      <div className="h-full flex flex-col items-center pt-[25vh] bg-background px-4">
 
         <h1 className="text-4xl font-bold mb-10">HearMind</h1>
 
@@ -53,9 +53,9 @@ const LoginPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="
-              w-full border border-gray-200 rounded-2xl
-              px-4 py-3 text-gray-800 text-base
-              focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400
+              w-full border border-input rounded-2xl
+              px-4 py-3 text-foreground text-base
+              focus:outline-none focus:ring-2 focus:ring-ring focus:border-input
             "
           />
 
@@ -65,9 +65,9 @@ const LoginPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="
-              w-full border border-gray-200 rounded-2xl
-              px-4 py-3 text-gray-800 text-base
-              focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400
+              w-full border border-input rounded-2xl
+              px-4 py-3 text-foreground text-base
+              focus:outline-none focus:ring-2 focus:ring-ring focus:border-input
             "
           />
 
@@ -76,8 +76,8 @@ const LoginPage = () => {
             disabled={loading}
             className="
               w-full mt-4
-              bg-[#7DCC74] hover:bg-[#76b85d]
-              text-white font-semibold text-base
+              bg-primary hover:bg-primary/90
+              text-primary-foreground font-semibold text-base
               rounded-2xl py-3
               disabled:opacity-60 disabled:cursor-not-allowed
               transition-colors duration-150

@@ -60,7 +60,7 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className="h-full flex flex-col items-center pt-[25vh] bg-white px-4">
+    <div className="h-full flex flex-col items-center pt-[25vh] bg-background px-4">
 
       <h1 className="text-4xl font-bold mb-10">HearMind</h1>
 
@@ -78,9 +78,9 @@ const SignUpPage = () => {
                 setIsEmailChecked(false); // 이메일 변경 시 중복 확인 초기화
             }}
             className="
-              flex-1 border border-gray-200 rounded-2xl
-              px-4 py-3 text-gray-800 text-base
-              focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400
+              flex-1 border border-input rounded-2xl
+              px-4 py-3 text-foreground text-base
+              focus:outline-none focus:ring-2 focus:ring-ring focus:border-input
             "
           />
 
@@ -88,9 +88,9 @@ const SignUpPage = () => {
             type="button"
             onClick={handleDuplicateCheck}
             className="
-              px-3 py-2 rounded-xl bg-[#7DCC74]
-              text-white text-sm font-medium
-              hover:bg-[#76b85d] transition-colors
+              px-3 py-2 rounded-xl bg-primary
+              text-primary-foreground text-sm font-medium
+              hover:bg-primary/90 transition-colors
               cursor-pointer
             "
           >
@@ -104,9 +104,9 @@ const SignUpPage = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="
-            w-full border border-gray-200 rounded-2xl
-            px-4 py-3 text-gray-800 text-base
-            focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400
+            w-full border border-input rounded-2xl
+            px-4 py-3 text-foreground text-base
+            focus:outline-none focus:ring-2 focus:ring-ring focus:border-input
           "
         />
 
@@ -117,13 +117,13 @@ const SignUpPage = () => {
           onChange={(e) => setPasswordCheck(e.target.value)}
           className={`
             w-full border rounded-2xl
-            px-4 py-3 text-gray-800 text-base
-            focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400
-            ${passwordCheck && (password !== passwordCheck) ? "border-red-500" : "border-gray-200"}
+            px-4 py-3 text-foreground text-base
+            focus:outline-none focus:ring-2 focus:ring-ring focus:border-input
+            ${passwordCheck && (password !== passwordCheck) ? "border-destructive" : "border-input"}
           `}
         />
         {passwordCheck && (password !== passwordCheck) && (
-          <p className="text-red-500 text-sm px-2">비밀번호가 일치하지 않습니다.</p>
+          <p className="text-destructive text-sm px-2">비밀번호가 일치하지 않습니다.</p>
         )}
 
         <div className="flex items-center gap-2">
@@ -133,9 +133,9 @@ const SignUpPage = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="
-              flex-1 border border-gray-200 rounded-2xl
-              px-4 py-3 text-gray-800 text-base
-              focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-gray-400
+              flex-1 border border-input rounded-2xl
+              px-4 py-3 text-foreground text-base
+              focus:outline-none focus:ring-2 focus:ring-ring focus:border-input
             "
           />
 
@@ -143,10 +143,10 @@ const SignUpPage = () => {
             value={gender}
             onChange={(e) => setGender(e.target.value)}
             className="
-              w-28 border border-gray-200 rounded-2xl
-              px-3 py-3 text-gray-800 text-base
-              bg-white focus:outline-none
-              focus:ring-2 focus:ring-gray-300 focus:border-gray-400
+              w-28 border border-input rounded-2xl
+              px-3 py-3 text-foreground text-base
+              bg-background focus:outline-none
+              focus:ring-2 focus:ring-ring focus:border-input
             "
           >
             <option value="">성별</option>
@@ -160,12 +160,12 @@ const SignUpPage = () => {
           disabled={!isEmailChecked}
           className="
             w-full mt-4
-            bg-[#7DCC74] hover:bg-[#76b85d]
-            text-white font-semibold text-base
+            bg-primary hover:bg-primary/90
+            text-primary-foreground font-semibold text-base
             rounded-2xl py-3
             transition-colors duration-150
             cursor-pointer
-            disabled:bg-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-300
+            disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed disabled:hover:bg-muted
           "
         >
           회원가입

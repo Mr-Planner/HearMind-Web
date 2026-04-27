@@ -10,14 +10,14 @@ export default function LogButton({ text, onClick }: { text: string, onClick: ()
             onClick={onClick}
             className="
             flex items-center justify-center gap-2 
-            border border-gray-300 rounded-lg
+            border border-border rounded-lg
             px-2.5 py-1
-            bg-white shadow-sm cursor-pointer
-            hover:shadow-md hover:border-gray-400
+            bg-background shadow-sm cursor-pointer
+            hover:shadow-md hover:border-input
             transition-all duration-200
             "
         >
-            <span className="text-sm font-semibold text-gray-800">{text}</span>
+            <span className="text-sm font-semibold text-foreground">{text}</span>
 
             {text === "로그인" && <img src={logIn} alt = "로그인"></img>}
             {text === "로그아웃" && <img src = {logOut} alt = "로그아웃"></img>}
