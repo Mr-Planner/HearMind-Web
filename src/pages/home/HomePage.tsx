@@ -12,8 +12,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import SpeechItem from "../../components/CounselingItem";
 import { deleteSpeech, fetchSpeeches } from "../../service/speechApi";
 
-import recording from "../../assets/speech/recording.svg";
-
 function HomePage() {
 
     const navigate = useNavigate();
@@ -21,18 +19,18 @@ function HomePage() {
     const isLoggedIn = useAuthStore((state: any) => state.isLoggedIn);
     
     const { folderId } = useParams(); // /speech, /speech/:folderId
-    const realFolderId = folderId ?? "all"; // 없을 경우 '모든 Speech'라고 가정
+    const realFolderId = folderId ?? "all"; // 없을 경우 '모든 내담자'라고 가정
 
     const queryClient = useQueryClient();
 
     // function
-    const handleRecordingClick = () => {
+    const handleUploadClick = () => {
         if (!isLoggedIn) {
         navigate("/login");
         } else {
-        navigate("/recording");
+        navigate("/upload");
         }
-  };
+    };
 
     // 서버에서 SpeechList가져오기
     // useQuery : GET(읽기) 전용
@@ -72,6 +70,22 @@ function HomePage() {
 
     return (
         <main className="flex-1 overflow-y-auto px-16 py-10">
+            {/* 내담자 선택 시 리포트 링크 */}
+            {folderId && folderId !== 'all' && (
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-xl font-bold text-foreground">상담 기록</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">내담자의 상담 기록을 확인하세요.</p>
+                    </div>
+                    <button
+                        onClick={() => navigate(`/client/${folderId}`)}
+                        className="px-4 py-2 bg-primary/10 text-[#8b5cf6] text-sm font-semibold rounded-lg hover:bg-primary/20 transition-colors cursor-pointer"
+                    >
+                        분석 리포트 보기 →
+                    </button>
+                </div>
+            )}
+
             {isLoading && <p>로딩 중...</p>}
 
             {isError && (
@@ -90,6 +104,8 @@ function HomePage() {
                             duration={`${Math.floor(speech.duration_sec / 60)}분 ${Math.round(speech.duration_sec % 60)}초`}
                             description={speech.preview_text}
                             folderId={speech.category_id}
+                            clientName={speech.client_name}
+                            sessionNumber={speech.session_number}
                             onDelete={handleDeleteSpeech}
                         />
                     ))}
@@ -99,8 +115,8 @@ function HomePage() {
             <button 
                 className="fixed bottom-8 right-8 z-50 cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-primary/90
                            w-16 h-16 bg-primary text-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(196,181,253,0.5)]" 
-                onClick={handleRecordingClick}
-                aria-label="녹음 시작"
+                onClick={handleUploadClick}
+                aria-label="파일 업로드"
             >
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19"></line>

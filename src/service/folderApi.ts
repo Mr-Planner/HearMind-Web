@@ -1,6 +1,6 @@
 // folder.js — Mock + 실제 서버 버전 통합
 
-const USE_MOCK = false;   // mock 사용 시 true, 실제 서버 연동 시 false
+const USE_MOCK = false;   // MSW가 mock을 처리하므로 항상 false
 
 const BASE_URL = "http://localhost:8080";
 

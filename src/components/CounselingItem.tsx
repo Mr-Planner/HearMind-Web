@@ -4,14 +4,26 @@ import trash from "../assets/counselingitem/trash.svg";
 
 // todo 스피치 삭제시에 alert 띄우기 (완성도)
 // todo 반응형으로 Speech정보 UI 약간 조절하기
-interface SpeechItemProps { id: string | number; title: string; category: string; date: string; duration: string; description: string; folderId: string | number; onDelete: (id: string | number) => void; }
-const SpeechItem = ({ id, title, category, date, duration, description, folderId, onDelete }: SpeechItemProps) => {
+interface SpeechItemProps {
+  id: string | number;
+  title: string;
+  category: string;
+  date: string;
+  duration: string;
+  description: string;
+  folderId: string | number;
+  clientName?: string;
+  sessionNumber?: number;
+  onDelete: (id: string | number) => void;
+}
+
+const SpeechItem = ({ id, title, category, date, duration, description, folderId, clientName, sessionNumber, onDelete }: SpeechItemProps) => {
 
   const detailPath = `/${folderId}/${id}`;
   
-  // Extract first letter for the avatar badge (mocking a name)
-  const initial = "김"; 
-  const subtitle = "김민수 · 5회차 상담"; // Mock subtitle
+  const displayName = clientName || '내담자';
+  const initial = displayName.charAt(0);
+  const subtitle = `${displayName} · ${sessionNumber || '-'}회차 상담`;
 
   return (
     <Link to={detailPath} className="block mb-4">
