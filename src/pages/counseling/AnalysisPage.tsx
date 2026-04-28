@@ -397,9 +397,6 @@ const AnalysisPage = () => {
                           <p className="text-sm text-muted-foreground mb-2">
                             {peak.trigger} 시점에서 {peak.description}
                           </p>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-semibold text-foreground">음성 특징:</span> {peak.voiceFeatures}
-                          </p>
                         </div>
                       ))}
                     </div>
