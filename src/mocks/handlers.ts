@@ -90,10 +90,10 @@ interface VoiceDetailResponse {
 }
 
 // --- 내담자(폴더) 데이터 ---
-const mockClients: Array<{ id: number; name: string; age: number; gender: string; memo: string; totalSessions: number; lastSession: string }> = [
-  { id: 1, name: '김민수', age: 19, gender: '남성', memo: '수능 준비 중인 고3 학생. 완벽주의 성향 강함.', totalSessions: 12, lastSession: '2024.12.15' },
-  { id: 2, name: '이지은', age: 22, gender: '여성', memo: '신입 직장인. 대인관계 어려움 호소.', totalSessions: 8, lastSession: '2024.12.12' },
-  { id: 3, name: '박준영', age: 25, gender: '남성', memo: '취업 준비생. 면접 불안 심각.', totalSessions: 6, lastSession: '2024.12.10' },
+const mockClients: Array<{ id: number; name: string; age: number; gender: string; totalSessions: number; lastSession: string }> = [
+  { id: 1, name: '김민수', age: 19, gender: '남성', totalSessions: 12, lastSession: '2024.12.15' },
+  { id: 2, name: '이지은', age: 22, gender: '여성', totalSessions: 8, lastSession: '2024.12.12' },
+  { id: 3, name: '박준영', age: 25, gender: '남성', totalSessions: 6, lastSession: '2024.12.10' },
 ];
 
 // --- 상담 기록 데이터 (내담자별) ---
@@ -167,7 +167,7 @@ export const handlers = [
       message: 'Login successful',
       user: {
         id: 1,
-        name: '김민수 상담사',
+        name: '정상현',
         email: 'test@hearmind.com',
       },
       access_token: 'mock-access-token',
@@ -189,7 +189,6 @@ export const handlers = [
         name: c.name,
         age: c.age,
         gender: c.gender,
-        memo: c.memo,
         totalSessions: c.totalSessions,
         lastSession: c.lastSession,
       }))
@@ -203,11 +202,10 @@ export const handlers = [
     const name = params.get('name') || '새 내담자';
     const age = parseInt(params.get('age') || '0', 10);
     const gender = params.get('gender') || '';
-    const memo = params.get('memo') || '';
     const newId = mockClients.length > 0 ? Math.max(...mockClients.map(c => c.id)) + 1 : 1;
-    const newClient = { id: newId, name, age, gender, memo, totalSessions: 0, lastSession: '-' };
+    const newClient = { id: newId, name, age, gender, totalSessions: 0, lastSession: '-' };
     mockClients.push(newClient);
-    return HttpResponse.json({ id: newId, name, age, gender, memo });
+    return HttpResponse.json({ id: newId, name, age, gender });
   }),
 
   // 5. 폴더(내담자) 수정 API
@@ -216,9 +214,16 @@ export const handlers = [
     const body = await request.text();
     const urlParams = new URLSearchParams(body);
     const name = urlParams.get('name') || '';
+    const ageStr = urlParams.get('age');
+    const gender = urlParams.get('gender') || '';
+
     const client = mockClients.find(c => c.id === Number(id));
-    if (client) client.name = name;
-    return HttpResponse.json({ id: Number(id), name });
+    if (client) {
+      client.name = name;
+      if (ageStr) client.age = Number(ageStr);
+      if (gender) client.gender = gender;
+    }
+    return HttpResponse.json({ id: Number(id), name, age: client?.age, gender: client?.gender });
   }),
 
   // 6. 폴더(내담자) 삭제 API
@@ -449,7 +454,7 @@ export const handlers = [
     const reportDataMap: Record<number, any> = {
       1: {
         summary: {
-          name: '김민수', age: 19, totalSessions: 12, lastSession: '2024.12.15',
+          name: '김민수', age: 19, gender: '남성', totalSessions: 12, lastSession: '2024.12.15',
         },
         topicChart: {
           labels: ['학업', '대인관계', '진로', '가족'],
@@ -496,7 +501,7 @@ export const handlers = [
       },
       2: {
         summary: {
-          name: '이지은', age: 22, totalSessions: 8, lastSession: '2024.12.12',
+          name: '이지은', age: 22, gender: '여성', totalSessions: 8, lastSession: '2024.12.12',
         },
         topicChart: {
           labels: ['직장', '대인관계', '자존감', '미래'],
@@ -537,7 +542,7 @@ export const handlers = [
       },
       3: {
         summary: {
-          name: '박준영', age: 25, totalSessions: 6, lastSession: '2024.12.10',
+          name: '박준영', age: 25, gender: '남성', totalSessions: 6, lastSession: '2024.12.10',
         },
         topicChart: {
           labels: ['취업', '진로', '자존감', '가족'],

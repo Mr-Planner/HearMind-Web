@@ -30,13 +30,12 @@ async function realFetchFolders() {
   return res.json();
 }
 
-// 내담자(폴더) 추가 (Real) — name, age, gender, memo 포함
-async function realCreateFolder(payload: { name: string; age?: number; gender?: string; memo?: string }): Promise<any> {
+// 내담자(폴더) 추가 (Real) — name, age, gender 포함
+async function realCreateFolder(payload: { name: string; age?: number; gender?: string }): Promise<any> {
   const formData = new URLSearchParams();
   formData.append("name", payload.name);
   if (payload.age !== undefined) formData.append("age", String(payload.age));
   if (payload.gender) formData.append("gender", payload.gender);
-  if (payload.memo) formData.append("memo", payload.memo);
 
   const res = await fetch(`${BASE_URL}/category`, {
     method: "POST",
@@ -46,13 +45,15 @@ async function realCreateFolder(payload: { name: string; age?: number; gender?: 
 
   if (!res.ok) throw new Error("Failed to create folder");
 
-  return res.json(); // { id, name, age, gender, memo }
+  return res.json(); // { id, name, age, gender }
 }
 
 // 폴더 수정 (Real)
-async function realUpdateFolder(id: number | string, name: string): Promise<any> {
+async function realUpdateFolder(id: number | string, payload: { name: string; age?: number; gender?: string }): Promise<any> {
   const formData = new URLSearchParams();
-  formData.append("name", name);
+  formData.append("name", payload.name);
+  if (payload.age !== undefined) formData.append("age", String(payload.age));
+  if (payload.gender) formData.append("gender", payload.gender);
 
   const res = await fetch(`${BASE_URL}/category/${id}`, {
     method: "PUT",
@@ -101,7 +102,7 @@ async function mockFetchFolders() {
 }
 
 // 폴더 추가 (MOCK)
-async function mockCreateFolder(payload: { name: string; age?: number; gender?: string; memo?: string }): Promise<any> {
+async function mockCreateFolder(payload: { name: string; age?: number; gender?: string }): Promise<any> {
   const maxId = mockFolders.length > 0
     ? Math.max(...mockFolders.map(f => f.id))
     : 0;
@@ -113,9 +114,9 @@ async function mockCreateFolder(payload: { name: string; age?: number; gender?: 
 }
 
 // 폴더 수정 (MOCK)
-async function mockUpdateFolder(id: number | string, newName: string): Promise<any> {
+async function mockUpdateFolder(id: number | string, payload: { name: string; age?: number; gender?: string }): Promise<any> {
   mockFolders = mockFolders.map(f =>
-    f.id === id ? { ...f, name: newName } : f
+    f.id === id ? { ...f, ...payload } : f
   );
   return Promise.resolve(mockFolders.find(f => f.id === id));
 }

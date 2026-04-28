@@ -19,7 +19,6 @@ export default function ClientSelectModal({ onSelect }: ClientSelectModalProps) 
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<Gender | ''>('');
-  const [memo, setMemo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { folders, fetchFolders, addFolder } = useFolderStore(
@@ -43,14 +42,21 @@ export default function ClientSelectModal({ onSelect }: ClientSelectModalProps) 
       toast.info('이름을 입력해주세요.');
       return;
     }
+    if (!age || parseInt(age, 10) <= 0) {
+      toast.info('올바른 나이를 입력해주세요.');
+      return;
+    }
+    if (!gender) {
+      toast.info('성별을 선택해주세요.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const payload: NewClientPayload = {
         name: name.trim(),
-        age: age ? parseInt(age, 10) : undefined,
-        gender: gender || undefined,
-        memo: memo.trim() || undefined,
+        age: parseInt(age, 10),
+        gender: gender,
       };
       const newClient = await addFolder(payload);
       toast.success(`${name} 님이 등록되었습니다.`);
@@ -174,7 +180,9 @@ export default function ClientSelectModal({ onSelect }: ClientSelectModalProps) 
             {/* 나이 + 성별 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-semibold text-foreground mb-1.5 block">나이</label>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  나이 <span className="text-destructive">*</span>
+                </label>
                 <input
                   type="number"
                   placeholder="예: 23"
@@ -186,7 +194,9 @@ export default function ClientSelectModal({ onSelect }: ClientSelectModalProps) 
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-foreground mb-1.5 block">성별</label>
+                <label className="text-sm font-semibold text-foreground mb-1.5 block">
+                  성별 <span className="text-destructive">*</span>
+                </label>
                 <div className="flex gap-2">
                   {(['남성', '여성', '기타'] as Gender[]).map((g) => (
                     <button
@@ -204,18 +214,6 @@ export default function ClientSelectModal({ onSelect }: ClientSelectModalProps) 
                   ))}
                 </div>
               </div>
-            </div>
-
-            {/* 메모 */}
-            <div>
-              <label className="text-sm font-semibold text-foreground mb-1.5 block">메모</label>
-              <textarea
-                placeholder="내담자 특이사항, 상담 배경 등을 적어두세요."
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                rows={3}
-                className="w-full border border-input rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors resize-none"
-              />
             </div>
 
             {/* 등록 버튼 */}

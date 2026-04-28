@@ -6,7 +6,6 @@ export interface Folder {
   name: string;
   age?: number;
   gender?: string;
-  memo?: string;
   totalSessions?: number;
   lastSession?: string;
 }
@@ -15,7 +14,6 @@ export interface NewClientPayload {
   name: string;
   age?: number;
   gender?: string;
-  memo?: string;
 }
 
 export interface FolderState {
@@ -24,7 +22,7 @@ export interface FolderState {
   error: string | null;
   fetchFolders: () => Promise<void>;
   addFolder: (payload: NewClientPayload) => Promise<Folder>;
-  updateFolder: (id: number, name: string) => Promise<Folder>;
+  updateFolder: (id: number, payload: NewClientPayload) => Promise<Folder>;
   deleteFolder: (id: number) => Promise<void>;
 }
 
@@ -61,10 +59,10 @@ export const useFolderStore = create<FolderState>((set) => ({
   },
 
   // 폴더 수정
-  updateFolder: async (id, name) => {
+  updateFolder: async (id, payload) => {
     set({ isLoading: true, error: null });
     try {
-      const updatedFolder = await updateFolder(id, name);
+      const updatedFolder = await updateFolder(id, payload);
       set((state) => ({
         folders: state.folders.map((f) => (f.id === id ? updatedFolder : f)),
         isLoading: false

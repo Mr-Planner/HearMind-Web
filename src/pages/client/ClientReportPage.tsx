@@ -18,6 +18,9 @@ import { Bar, Line } from 'react-chartjs-2';
 import { FaChevronLeft } from "react-icons/fa6";
 import { useNavigate, useParams } from "react-router-dom";
 import { fetchClientReport } from "../../service/speechApi";
+import { useFolderStore } from "../../store/folder/folderStore";
+import { toast } from "../../components/Toast";
+import { useShallow } from "zustand/react/shallow";
 
 dayjs.extend(utc);
 
@@ -39,12 +42,60 @@ function ClientReportPage() {
   const navigate = useNavigate();
   const { clientId } = useParams();
   const [activeTab, setActiveTab] = useState<Tab>('analysis');
+  const [isEditing, setIsEditing] = useState(false);
 
-  const { data: report, isLoading, isError } = useQuery({
+  const { updateFolder } = useFolderStore(
+    useShallow((state) => ({
+      updateFolder: state.updateFolder,
+    }))
+  );
+
+  const { data: report, isLoading, isError, refetch } = useQuery({
     queryKey: ['clientReport', clientId],
     queryFn: () => fetchClientReport(clientId!),
     enabled: !!clientId,
   });
+
+  // 수정용 폼 상태
+  const [editName, setEditName] = useState("");
+  const [editAge, setEditAge] = useState("");
+  const [editGender, setEditGender] = useState("");
+
+  const handleStartEdit = () => {
+    if (!report) return;
+    setEditName(report.summary.name);
+    setEditAge(String(report.summary.age || ""));
+    setEditGender(report.summary.gender || "");
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!clientId || !editName.trim()) {
+      toast.info("이름을 입력해주세요.");
+      return;
+    }
+    if (!editAge || parseInt(editAge, 10) <= 0) {
+      toast.info("올바른 나이를 입력해주세요.");
+      return;
+    }
+    if (!editGender) {
+      toast.info("성별을 선택해주세요.");
+      return;
+    }
+
+    try {
+      await updateFolder(Number(clientId), {
+        name: editName.trim(),
+        age: parseInt(editAge, 10),
+        gender: editGender,
+      });
+      toast.success("내담자 정보가 수정되었습니다.");
+      setIsEditing(false);
+      refetch(); // 리포트 정보 갱신
+    } catch (e) {
+      toast.error("수정에 실패했습니다.");
+    }
+  };
 
   if (isLoading) return (
     <div className="flex flex-col h-full bg-background overflow-y-auto px-8 py-8">
@@ -160,8 +211,18 @@ function ClientReportPage() {
               <FaChevronLeft size={16} className="text-foreground" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-foreground">내담자 감정 분석 리포트</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">{summary.name} · {summary.age}세 · 총 {summary.totalSessions}회 상담</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-foreground">내담자 감정 분석 리포트</h1>
+                <button 
+                  onClick={handleStartEdit}
+                  className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                >
+                  수정
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {summary.name} · {summary.age}세 · {summary.gender || '성별 미지정'} · 총 {summary.totalSessions}회 상담
+              </p>
             </div>
           </div>
           <button
@@ -335,6 +396,63 @@ function ClientReportPage() {
           </section>
         )}
       </main>
+      {/* 수정 모달 (간이 구현) */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[400px] shadow-2xl overflow-hidden p-6">
+            <h3 className="text-lg font-bold mb-4">내담자 정보 수정</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1 block">이름</label>
+                <input 
+                  type="text" 
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">나이</label>
+                  <input 
+                    type="number" 
+                    value={editAge}
+                    onChange={(e) => setEditAge(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground mb-1 block">성별</label>
+                  <select 
+                    value={editGender}
+                    onChange={(e) => setEditGender(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="">선택 안 함</option>
+                    <option value="남성">남성</option>
+                    <option value="여성">여성</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <button 
+                onClick={() => setIsEditing(false)}
+                className="flex-1 py-2 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors cursor-pointer"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleSaveEdit}
+                className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer"
+              >
+                저장하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
