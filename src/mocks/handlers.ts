@@ -50,6 +50,39 @@ interface VoiceDetailResponse {
   category_name: string;
   voice_created_at: string;
   voice_duration: number;
+  emotionTimeline?: {
+    neutral: number[];
+    happiness: number[];
+    anger: number[];
+    sadness: number[];
+  };
+  analysis?: {
+    summary: {
+      title: string;
+      content: string;
+      metrics: {
+        avgPitchHz: number;
+        avgRateWpm: number;
+        emotionVariability: number;
+      };
+    };
+    emotionPeaks: {
+      title: string;
+      peaks: {
+        emotion: string;
+        emoji?: string;
+        timeRange: string;
+        intensity: number;
+        trigger: string;
+        description: string;
+        voiceFeatures: string;
+      }[];
+    };
+    suggestions: {
+      title: string;
+      items: string[];
+    };
+  };
   scripts: {
     part: string;
     segments: VoiceSegment[];
