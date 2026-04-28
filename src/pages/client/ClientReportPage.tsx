@@ -212,7 +212,7 @@ function ClientReportPage() {
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-foreground">내담자 감정 분석 리포트</h1>
+                <h1 className="text-xl font-bold text-foreground">{summary.name}님의 감정 분석 리포트</h1>
                 <button 
                   onClick={handleStartEdit}
                   className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"

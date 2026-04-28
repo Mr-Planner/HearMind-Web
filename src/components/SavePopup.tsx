@@ -132,7 +132,22 @@ const SavePopup = ({ isOpen, onClose, onSave, uploadProgress, defaultFolderId, d
           {uploadProgress > 0 ? (
             <div className="w-full">
               <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium text-[#4687e1]">업로드 중...</span>
+                {/* 
+                  [Back-end Coordination]
+                  사용자에게 작업 단계를 시각화하기 위해 아래와 같이 진행률 구간을 나눕니다.
+                  - 1~20%: 파일 업로드 (File Uploading)
+                  - 21~50%: STT 및 음성 데이터 분석 (Analyzing Voice Data)
+                  - 51~80%: 감정 변화 추이 및 지표 계산 (Calculating Emotion Trends)
+                  - 81~99%: 분석 리포트 및 제안 생성 (Generating Analysis Report)
+                  - 100%: 완료 (Complete)
+                */}
+                <span className="text-sm font-medium text-[#4687e1]">
+                  {uploadProgress <= 20 && "파일 업로드 중..."}
+                  {uploadProgress > 20 && uploadProgress <= 50 && "음성 데이터 분석 중..."}
+                  {uploadProgress > 50 && uploadProgress <= 80 && "감정 변화 추이 계산 중..."}
+                  {uploadProgress > 80 && uploadProgress < 100 && "분석 리포트 생성 중..."}
+                  {uploadProgress >= 100 && "분석 완료!"}
+                </span>
                 <span className="text-sm font-medium text-[#4687e1]">{uploadProgress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">

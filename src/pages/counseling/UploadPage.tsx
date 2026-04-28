@@ -105,6 +105,15 @@ const UploadPage = () => {
       eventSource.onmessage = (event) => {
         const progress = parseInt(event.data, 10);
         if (!isNaN(progress)) {
+          /* 
+            [Back-end Coordination]
+            서버에서는 다음 작업 단계에 맞춰 진행률(0~100)을 전송해 주세요.
+            1~20: 파일 업로드 완료 및 서버 수신
+            21~50: STT 및 음성 특징 추출 분석
+            51~80: 감정 분석 및 타임라인 데이터 생성
+            81~99: 분석 요약 및 제안 데이터(GPT) 생성
+            100: 모든 처리 완료
+          */
           setUploadProgress(Math.max(1, progress));
           if (progress === 100) eventSource.close();
         }
