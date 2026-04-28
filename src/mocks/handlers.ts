@@ -219,10 +219,88 @@ export const handlers = [
       return Array.from({ length }, (_, i) => base + Math.sin(i * 0.5) * 10 + (Math.random() * 5));
     };
 
+    // 감정 타임라인 생성 (1초에 1개 데이터포인트, 프론트에서 보간)
+    const generateEmotionTimeline = (durationSec: number) => {
+      const points = Math.floor(durationSec); // 1초당 1개
+      const neutral: number[] = [];
+      const happiness: number[] = [];
+      const anger: number[] = [];
+      const sadness: number[] = [];
+
+      for (let i = 0; i < points; i++) {
+        const t = i / points;
+        // 초반: 중립 높음 → 중반: 슬픔/분노 피크 → 후반: 행복 증가
+        neutral.push(
+          Math.max(0, Math.min(100, 50 - t * 30 + Math.sin(i * 0.03) * 15 + (Math.random() * 8 - 4)))
+        );
+        happiness.push(
+          Math.max(0, Math.min(100, 10 + t * 45 + Math.sin(i * 0.05) * 10 + (Math.random() * 6 - 3)))
+        );
+        anger.push(
+          Math.max(0, Math.min(100, 15 + Math.sin(i * 0.02 + 1) * 25 * (1 - t * 0.6) + (Math.random() * 8 - 4)))
+        );
+        sadness.push(
+          Math.max(0, Math.min(100, 20 + Math.sin(i * 0.04 + 2) * 30 * (t < 0.7 ? 1 : 0.3) + (Math.random() * 6 - 3)))
+        );
+      }
+      return { neutral, happiness, anger, sadness };
+    };
+
     // Find voice to get context
     const voice = allVoices.find(v => v.id === Number(speechId));
     const clientName = voice?.client_name || '김민수';
     const sessionNum = voice?.session_number || 5;
+    const duration = voice?.duration_sec || 45 * 60;
+
+    // 감정 타임라인 (전체 상담 기준)
+    // 실제로는 45분=2700초이지만, 데모에서는 90초로 축소
+    const demoDuration = 90;
+    const emotionTimeline = generateEmotionTimeline(demoDuration);
+
+    // 전체 상담에 대한 단일 분석 (종합분석 / 감정피크 / 상담제안)
+    const analysis = {
+      summary: {
+        title: '종합 분석',
+        content: `${clientName} 내담자는 본 상담에서 학업 스트레스 및 자기 효능감 저하에 대해 호소했습니다. 상담 초반에는 긴장감이 높았으나, 상담이 진행되면서 점차 안정을 찾아가는 양상을 보였습니다.\n\n주요 감정 변화:\n• 초반(0~30초): 중립적 톤으로 시작, 점차 불안감 증가\n• 중반(30~60초): "모의고사 성적" 키워드에서 감정 피크 발생\n• 후반(60~90초): 상담사의 공감 반응 후 안정화\n\n전반적으로 내담자의 감정 표현 능력은 양호하며, 상담사와의 라포가 잘 형성되어 있는 것으로 판단됩니다.`,
+        metrics: {
+          avgPitchHz: 245.8,
+          avgRateWpm: 168.5,
+          emotionVariability: 62.3,
+        },
+      },
+      emotionPeaks: {
+        title: '감정 피크 구간',
+        peaks: [
+          {
+            emotion: '분노',
+            emoji: '😤',
+            timeRange: '00:35 ~ 00:45',
+            intensity: 80,
+            trigger: '"모의고사 성적" 키워드 언급',
+            description: '불안 지수가 80%까지 급등했습니다. 목소리 톤이 높아지고 발화 속도가 평소보다 40% 증가했습니다.',
+            voiceFeatures: '목소리 떨림 증가, 호흡 불규칙, 말 끊김 빈번',
+          },
+          {
+            emotion: '슬픔',
+            emoji: '😢',
+            timeRange: '00:55 ~ 01:10',
+            intensity: 72,
+            trigger: '"저만 뒤처지는 것 같아요" 발언',
+            description: '슬픔과 무기력감이 동시에 나타났습니다. 자기 효능감 저하 및 학습된 무기력 패턴이 관찰됩니다.',
+            voiceFeatures: '목소리 톤 저하, 발화 속도 감소, 한숨 빈번',
+          },
+        ],
+      },
+      suggestions: {
+        title: '상담 제안',
+        items: [
+          '성적보다 학습 과정에 초점을 맞추는 인지 재구성 필요',
+          '작은 성취 경험을 통한 자기 효능감 회복',
+          '부모님과의 의사소통 개선 전략 논의',
+          '시험 불안 감소를 위한 이완 기법 교육',
+        ],
+      },
+    };
 
     return HttpResponse.json<VoiceDetailResponse>({
       id: Number(speechId),
@@ -230,6 +308,8 @@ export const handlers = [
       category_name: `${clientName} · ${sessionNum}회차 상담`,
       voice_created_at: voice?.created_at || '2024-12-17T05:30:00.000Z',
       voice_duration: voice?.duration_sec || 45 * 60,
+      emotionTimeline,
+      analysis,
       scripts: [
         {
           part: '상담 시작',
@@ -252,7 +332,7 @@ export const handlers = [
               segment_url: '',
               dB_list: generateMockDbList(40, -25),
               metrics: { dB: 45.2, pitch_mean_hz: 220.1, rate_wpm: 150.5 },
-              feedback: '<일반 반응>\n내담자가 학교 생활에 대한 전반적인 어려움을 토로하고 있습니다.',
+              feedback: '',
             },
             {
               segment_id: 103,
@@ -273,7 +353,7 @@ export const handlers = [
               segment_url: '',
               dB_list: generateMockDbList(50, -15),
               metrics: { dB: 55.8, pitch_mean_hz: 245.8, rate_wpm: 168.5 },
-              feedback: '<감정 피크 구간>\n"모의고사 성적" 키워드 언급 시점에서 불안 지수가 80%까지 급등했습니다. 목소리 톤이 높아지고 발화 속도가 평소보다 40% 증가했습니다.\n\n음성 특징: 목소리 떨림 증가, 호흡 불규칙, 말 끊김 빈번',
+              feedback: '',
             },
             {
               segment_id: 105,
@@ -294,7 +374,7 @@ export const handlers = [
               segment_url: '',
               dB_list: generateMockDbList(60, -10),
               metrics: { dB: 58.0, pitch_mean_hz: 250.0, rate_wpm: 170.2 },
-              feedback: '<감정 피크 구간>\n"저만 뒤처지는 것 같아요" 발언 시 슬픔과 무기력감이 동시에 나타났습니다. 자기 효능감 저하 및 학습된 무기력 패턴이 관찰됩니다.\n\n<상담 제안>\n- 성적보다 학습 과정에 초점을 맞추는 인지 재구성 필요\n- 작은 성취 경험을 통한 자기 효능감 회복\n- 부모님과의 의사소통 개선 전략 논의',
+              feedback: '',
             },
             {
               segment_id: 107,
@@ -314,7 +394,7 @@ export const handlers = [
               segment_url: '',
               dB_list: generateMockDbList(30, -25),
               metrics: { dB: 42.0, pitch_mean_hz: 200.0, rate_wpm: 130.2 },
-              feedback: '<일반 반응>\n내담자가 상담사의 공감에 긍정적으로 반응하며 안정을 찾고 있습니다.',
+              feedback: '',
             }
           ]
         }
@@ -344,10 +424,10 @@ export const handlers = [
         },
         emotionTrend: {
           labels: ['1회', '3회', '5회', '7회', '9회', '11회'],
-          anxiety: [70, 65, 55, 45, 35, 30],
+          neutral: [70, 65, 55, 45, 35, 30],
           anger: [20, 25, 30, 25, 30, 20],
           sadness: [30, 25, 20, 25, 20, 15],
-          joy: [10, 15, 25, 30, 40, 50],
+          happiness: [10, 15, 25, 30, 40, 50],
         },
         analysisText: '분석: 전반적으로 불안 수치가 감소하고 긍정적 감정(기쁨)이 증가하는 추세를 보입니다. 상담이 진행될수록 내담자의 심리적 안정도가 향상되고 있음을 나타냅니다.',
         positiveChanges: [
@@ -391,10 +471,10 @@ export const handlers = [
         },
         emotionTrend: {
           labels: ['1회', '2회', '3회', '4회', '5회', '6회', '7회', '8회'],
-          anxiety: [60, 55, 50, 45, 40, 38, 35, 30],
+          neutral: [60, 55, 50, 45, 40, 38, 35, 30],
           anger: [40, 45, 50, 40, 35, 30, 25, 20],
           sadness: [35, 30, 25, 30, 25, 20, 20, 15],
-          joy: [15, 20, 20, 25, 30, 35, 40, 45],
+          happiness: [15, 20, 20, 25, 30, 35, 40, 45],
         },
         analysisText: '분석: 직장 내 갈등 상황에서 분노 수치가 초반에 높았으나 점진적으로 감소하고 있습니다. 감정 조절 기술 습득에 긍정적인 반응을 보이고 있습니다.',
         positiveChanges: [
@@ -432,10 +512,10 @@ export const handlers = [
         },
         emotionTrend: {
           labels: ['1회', '2회', '3회', '4회', '5회', '6회'],
-          anxiety: [75, 70, 60, 55, 45, 40],
+          neutral: [75, 70, 60, 55, 45, 40],
           anger: [15, 20, 15, 10, 10, 5],
           sadness: [25, 20, 25, 20, 15, 10],
-          joy: [5, 10, 15, 25, 35, 45],
+          happiness: [5, 10, 15, 25, 35, 45],
         },
         analysisText: '분석: 취업 준비 과정에서의 불안이 주요 이슈이나 상담 진행에 따라 불안 수치가 꾸준히 감소하고 있습니다. 구체적인 계획 수립 후 자신감이 회복되는 추세입니다.',
         positiveChanges: [

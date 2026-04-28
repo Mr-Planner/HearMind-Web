@@ -14,7 +14,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Line } from 'react-chartjs-2';
-import { FaChevronLeft, FaChevronRight, FaPlay } from "react-icons/fa6";
+import { FaPlay } from "react-icons/fa6";
 import { useNavigate, useParams } from "react-router-dom";
 import { fetchSpeechDetail } from "../../service/speechApi";
 
@@ -31,11 +31,43 @@ ChartJS.register(
 
 dayjs.extend(utc);
 
+type EmotionKey = 'neutral' | 'happiness' | 'anger' | 'sadness';
+
+const EMOTION_CONFIG: Record<EmotionKey, { label: string; color: string; bgColor: string }> = {
+  neutral: { label: '중립', color: '#a78bfa', bgColor: 'rgba(167, 139, 250, 0.1)' },
+  happiness: { label: '행복', color: '#fbbf24', bgColor: 'rgba(251, 191, 36, 0.1)' },
+  anger: { label: '분노', color: '#f87171', bgColor: 'rgba(248, 113, 113, 0.1)' },
+  sadness: { label: '슬픔', color: '#60a5fa', bgColor: 'rgba(96, 165, 250, 0.1)' },
+};
+
+const EMOTION_KEYS: EmotionKey[] = ['neutral', 'happiness', 'anger', 'sadness'];
+
+// 보간 함수: 1초 간격 데이터를 부드러운 곡선으로 변환
+function interpolateData(raw: number[], factor: number = 3): number[] {
+  if (raw.length < 2) return raw;
+  const result: number[] = [];
+  for (let i = 0; i < raw.length - 1; i++) {
+    for (let j = 0; j < factor; j++) {
+      const t = j / factor;
+      // Cubic interpolation (Catmull-Rom)
+      const p0 = raw[Math.max(0, i - 1)];
+      const p1 = raw[i];
+      const p2 = raw[Math.min(raw.length - 1, i + 1)];
+      const p3 = raw[Math.min(raw.length - 1, i + 2)];
+      const val = 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+      result.push(Math.max(0, Math.min(100, val)));
+    }
+  }
+  result.push(raw[raw.length - 1]);
+  return result;
+}
+
 const AnalysisPage = () => {
   const { speechId } = useParams();
   const navigate = useNavigate();
-  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
+  const [selectedEmotion, setSelectedEmotion] = useState<EmotionKey>('neutral');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
   const isAutoPlayingRef = useRef(false);
 
   const { data: speech, isLoading, isError, error } = useQuery({
@@ -53,21 +85,6 @@ const AnalysisPage = () => {
 
   const segments = allSegments; 
   const currentSegment = segments[currentSegmentIndex];
-  
-  const validSegments = useMemo(() => segments.filter((seg: any) => seg.feedback && seg.feedback.trim() !== ""), [segments]);
-  const totalValidSegments = validSegments.length;
-
-  const currentValidIndex = useMemo(() => {
-    if (!currentSegment) return -1;
-    const idx = validSegments.findIndex((s: any) => s.segment_id === currentSegment.segment_id);
-    if (idx !== -1) return idx;
-    const currentIdxInAll = segments.findIndex((s: any) => s.segment_id === currentSegment.segment_id);
-    const validBeforeCount = validSegments.filter((s: any) => {
-       const sIdx = segments.findIndex((seg: any) => seg.segment_id === s.segment_id);
-       return sIdx < currentIdxInAll;
-    }).length;
-    return validBeforeCount - 1; 
-  }, [currentSegment, validSegments, segments]);
 
   useEffect(() => {
     return () => {
@@ -78,98 +95,49 @@ const AnalysisPage = () => {
     };
   }, []);
 
-  const handlePrev = () => {
-    if (currentValidIndex > 0) {
-        const prevValidSeg = validSegments[currentValidIndex - 1];
-        const originalIndex = segments.findIndex((s: any) => s.segment_id === prevValidSeg.segment_id);
-        if (originalIndex !== -1) setCurrentSegmentIndex(originalIndex);
-    }
-  };
-  const handleNext = () => {
-      if (currentValidIndex < totalValidSegments - 1) {
-          const nextValidSeg = validSegments[currentValidIndex + 1];
-          const originalIndex = segments.findIndex((s: any) => s.segment_id === nextValidSeg.segment_id);
-          if (originalIndex !== -1) setCurrentSegmentIndex(originalIndex);
-      }
-  };
-
   const formattedDate = speech ? dayjs.utc(speech.voice_created_at).local().format('M.D (ddd) h:mm A') : '';
   const durationMin = speech ? Math.floor(speech.voice_duration / 60) : 0;
   const durationSec = speech ? Math.round(speech.voice_duration % 60) : 0;
   const formattedDuration = `${durationMin}분 ${durationSec}초`;
 
   const scripts = speech?.scripts || [];
-  const dBList = currentSegment?.dB_list || [];
-  const startTime = currentSegment?.start || 0;
-  
-  const displayMetrics = currentSegment?.metrics;
-  const displayFeedback = currentSegment?.feedback;
+  const emotionTimeline = speech?.emotionTimeline;
+  const analysis = speech?.analysis;
 
-  const originalInterval = 0.1;
-  const displayDuration = dBList.length * 0.1;
+  // 보간된 감정 차트 데이터
+  const emotionChartData = useMemo(() => {
+    if (!emotionTimeline || !speech) return null;
+    const rawData = emotionTimeline[selectedEmotion] || [];
+    const interpolated = interpolateData(rawData, 3);
+    const config = EMOTION_CONFIG[selectedEmotion];
+    const totalDuration = speech.voice_duration; // 실제 녹음 시간 (초)
+    const totalPoints = interpolated.length;
 
-  const avgDb = displayMetrics?.dB ? Number(displayMetrics.dB) : null;
-  const upperDbLimit = avgDb !== null ? avgDb + 1.9 : null;
-  const lowerDbLimit = avgDb !== null ? avgDb - 2.5 : null;
-
-  const rangeDataUpper = upperDbLimit !== null ? [
-      { x: 0, y: upperDbLimit },
-      { x: displayDuration, y: upperDbLimit }
-  ] : [];
-  
-  const rangeDataLower = lowerDbLimit !== null ? [
-      { x: 0, y: lowerDbLimit },
-      { x: displayDuration, y: lowerDbLimit }
-  ] : [];
-
-  const chartData = {
-    datasets: [
-      {
-        label: 'Original dB',
-        data: dBList.map((val: any, i: number) => ({ x: i * originalInterval, y: val })),
-        borderColor: '#c4b5fd',
-        backgroundColor: 'rgba(196, 181, 253, 0.1)',
+    return {
+      labels: interpolated.map((_, i) => {
+        const totalSec = (i / Math.max(1, totalPoints - 1)) * totalDuration;
+        const m = Math.floor(totalSec / 60);
+        const s = Math.floor(totalSec % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      }),
+      datasets: [{
+        label: config.label,
+        data: interpolated,
+        borderColor: config.color,
+        backgroundColor: config.bgColor,
         tension: 0.4,
         pointRadius: 0,
         pointHoverRadius: 4,
-        borderWidth: 2,
-        fill: false,
-        order: 1,
-        yAxisID: 'y',
-      },
-      {
-        label: 'Optimal Range Upper',
-        data: rangeDataUpper,
-        borderColor: 'rgba(251, 191, 36, 0.8)',
-        borderWidth: 1,
-        borderDash: [5, 5],
-        pointRadius: 0,
-        fill: false,
-        order: 3,
-        yAxisID: 'y',
-      },
-      {
-        label: 'Optimal Range',
-        data: rangeDataLower,
-        borderColor: 'rgba(251, 191, 36, 0.8)',
-        backgroundColor: 'rgba(251, 191, 36, 0.15)',
-        borderWidth: 1,
-        borderDash: [5, 5],
-        pointRadius: 0,
-        fill: '-1',
-        order: 4,
-        yAxisID: 'y',
-      }
-    ],
-  };
+        borderWidth: 2.5,
+        fill: true,
+      }]
+    };
+  }, [emotionTimeline, selectedEmotion, speech]);
 
-  const chartOptions: any = {
+  const emotionChartOptions: any = {
     responsive: true,
     maintainAspectRatio: false,
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
+    interaction: { mode: 'index', intersect: false },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -177,36 +145,33 @@ const AnalysisPage = () => {
         padding: 10,
         displayColors: false,
         callbacks: {
-          label: (context: any) => `Volume: ${context.parsed.y} dB`
+          title: (ctx: any) => ctx[0]?.label || '',
+          label: (ctx: any) => `${EMOTION_CONFIG[selectedEmotion].label}: ${ctx.parsed.y.toFixed(1)}%`,
         }
       }
     },
     scales: {
       x: {
-        type: 'linear',
-        position: 'bottom',
+        display: true,
         grid: { display: false },
-        min: 0,
-        max: displayDuration,
         ticks: {
-            maxTicksLimit: 8,
-            color: '#9CA3AF',
-            callback: function(value: any) {
-                const min = Math.floor((startTime + value) / 60);
-                const sec = Math.floor((startTime + value) % 60);
-                return `${min}:${sec.toString().padStart(2, '0')}`;
-            }
-        }
+          color: '#9CA3AF',
+          maxTicksLimit: 8,
+          font: { size: 11 },
+        },
       },
       y: {
-        type: 'linear',
-        display: true,
-        position: 'left',
-        grid: { color: '#F3F4F6' },
-        ticks: { color: '#9CA3AF' },
+        beginAtZero: true,
+        max: 100,
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: {
+          color: '#9CA3AF',
+          stepSize: 25,
+          font: { size: 11 },
+        },
       },
     },
-    animation: { duration: 0 }
+    animation: { duration: 400, easing: 'easeInOutQuart' },
   };
 
   const playAudio = (url: string, playingIndex: number, isContinuous = false) => {
@@ -233,7 +198,16 @@ const AnalysisPage = () => {
       }
   };
 
-  if (isLoading) return <div className="p-8">로딩 중...</div>;
+  if (isLoading) return (
+    <div className="flex flex-col h-full bg-background animate-pulse p-8">
+      <div className="h-8 bg-muted rounded w-1/3 mb-4" />
+      <div className="h-4 bg-muted rounded w-1/4 mb-8" />
+      <div className="flex flex-1 gap-4">
+        <div className="w-1/2 bg-muted rounded" />
+        <div className="w-1/2 bg-muted rounded" />
+      </div>
+    </div>
+  );
   if (isError) return <div className="p-8 text-red-500">에러 발생: {error?.message}</div>;
   if (!speech) return <div className="p-8">데이터가 없습니다.</div>;
 
@@ -261,6 +235,7 @@ const AnalysisPage = () => {
       </header>
 
       <main className="flex flex-1 overflow-hidden">
+        {/* 왼쪽: 스크립트 */}
         <section className="w-1/2 border-r border-border overflow-y-auto p-8">
           <div className="space-y-8">
             <div className="flex justify-between items-center mb-6">
@@ -335,110 +310,127 @@ const AnalysisPage = () => {
           </div>
         </section>
 
-        <section className="w-1/2 flex flex-col bg-muted/30 h-full">
-          {totalValidSegments === 0 ? (
-             <div className="flex items-center justify-center h-full text-muted-foreground text-lg font-medium p-8">
-                 분석 결과가 없습니다.
-             </div>
-          ) : (
-             <>
-                <div className="flex items-center justify-between mb-6 px-8 pt-8">
-            <button 
-              onClick={handlePrev} 
-              disabled={currentValidIndex <= 0}
-              className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <FaChevronLeft size={20} />
-            </button>
-            <span className="text-2xl font-bold text-foreground">
-              {currentValidIndex !== -1 ? currentValidIndex + 1 : "0"} / {totalValidSegments}
-            </span>
-            <button 
-              onClick={handleNext} 
-              disabled={currentValidIndex === -1 || currentValidIndex >= totalValidSegments - 1}
-              className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-            >
-              <FaChevronRight size={20} />
-            </button>
-          </div>
+        {/* 오른쪽: 감정 분석 */}
+        <section className="w-1/2 flex flex-col bg-muted/30 h-full overflow-y-auto">
+          <div className="p-8 space-y-6">
+            
+            {/* 감정 변화 분석 차트 */}
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-4">감정 변화 분석</h3>
 
-          {currentSegment ? (
-            <>
-              <div className="flex-1 flex flex-col overflow-hidden px-8">
-              <div className="bg-card border border-border rounded-xl h-48 mb-4 p-4 shadow-sm relative w-full shrink-0">
-                {dBList.length > 0 ? (
-                    <Line data={chartData} options={chartOptions} />
-                ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                        데이터가 없습니다.
+              {/* 차트 */}
+              <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+                <div className="h-[200px]">
+                  {emotionChartData ? (
+                    <Line data={emotionChartData} options={emotionChartOptions} />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                      감정 데이터가 없습니다.
                     </div>
-                )}
-              </div>
-
-              <div className="mb-4 shrink-0">
-                <div className="flex items-center justify-between mb-4">
-                     <h3 className="text-lg font-bold">분석 결과</h3>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-card p-3 rounded-xl shadow-sm border border-border text-center">
-                    <p className="text-sm text-muted-foreground mb-1">목소리 크기</p>
-                    <p className="text-xl font-bold text-card-foreground">
-                        {displayMetrics?.dB ? Number(displayMetrics.dB).toFixed(2) : 0} 
-                        <span className="text-sm font-normal">dB</span>
-                    </p>
-                    </div>
-                    <div className="bg-card p-3 rounded-xl shadow-sm border border-border text-center">
-                    <p className="text-sm text-muted-foreground mb-1">목소리 높낮이</p>
-                    <p className="text-xl font-bold text-card-foreground">
-                        {displayMetrics?.pitch_mean_hz ? Number(displayMetrics.pitch_mean_hz).toFixed(2) : 0}
-                        <span className="text-sm font-normal">Hz</span>
-                    </p>
-                    </div>
-                    <div className="bg-card p-3 rounded-xl shadow-sm border border-border text-center">
-                    <p className="text-sm text-muted-foreground mb-1">말하기 속도</p>
-                    <p className="text-xl font-bold text-card-foreground">
-                        {displayMetrics?.rate_wpm ? Number(displayMetrics.rate_wpm).toFixed(2) : 0}
-                        <span className="text-sm font-normal">WPM</span>
-                    </p>
-                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="bg-card rounded-xl shadow-sm border border-border mb-4 flex-1 flex flex-col min-h-0">
-                <div className="px-6 py-4 border-b border-border flex-none bg-card rounded-t-xl">
-                    <h3 className="text-lg font-bold text-card-foreground">상세 분석</h3>
-                </div>
-                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                    <div className="text-foreground leading-relaxed text-sm">
-                    {(() => {
-                        const text = displayFeedback || "분석 내용이 없습니다.";
-                        if (!text) return null;
-                        return text.split('\n').map((line: string, index: number) => {
-                        const trimmed = line.trim();
-                        if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
-                            const isFirst = index === 0;
-                            return (
-                                <h4 key={index} className={`font-bold text-card-foreground mb-2 text-base ${isFirst ? 'mt-0' : 'mt-4'}`}>
-                                    {trimmed.replace(/[<>]/g, '')}
-                               </h4>
-                            );
+              {/* 감정 선택 탭 (차트 아래) */}
+              <div className="grid grid-cols-4 gap-2 mt-4">
+                {EMOTION_KEYS.map((key) => {
+                  const config = EMOTION_CONFIG[key];
+                  const isActive = selectedEmotion === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedEmotion(key)}
+                      className={`py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer border
+                        ${isActive
+                          ? 'border-transparent shadow-sm text-white'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                         }
-                        if (trimmed === '') return <div key={index} className="h-2" />;
-                        return <p key={index} className="mb-1">{line}</p>;
-                        });
-                    })()}
-                    </div>
-                </div>
+                      `}
+                      style={isActive ? { backgroundColor: config.color } : undefined}
+                    >
+                      {config.label}
+                    </button>
+                  );
+                })}
               </div>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-lg font-medium p-8">
-              선택된 문장이 없습니다.
             </div>
-          )}
-        </>
-      )}
+
+            {/* 상세 분석 (3 섹션 고정) */}
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-4">상세 분석</h3>
+              <div className="space-y-4">
+
+                {/* 1. 종합 분석 */}
+                {analysis?.summary && (
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-border bg-primary/5">
+                      <h4 className="font-bold text-foreground">
+                        {analysis.summary.title}
+                      </h4>
+                    </div>
+                    <div className="p-5">
+                      <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {analysis.summary.content}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. 감정 피크 구간 */}
+                {analysis?.emotionPeaks && (
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-border bg-destructive/5">
+                      <h4 className="font-bold text-foreground">
+                        {analysis.emotionPeaks.title}
+                      </h4>
+                    </div>
+                    <div className="p-5 space-y-4">
+                      {analysis.emotionPeaks.peaks.map((peak: any, i: number) => (
+                        <div key={i} className={`border rounded-xl p-4 ${
+                          peak.emotion === '분노' ? 'border-red-200 bg-red-50/50' : 'border-blue-200 bg-blue-50/50'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${peak.emotion === '분노' ? 'bg-red-400' : 'bg-blue-400'}`} />
+                            <span className="font-bold text-foreground">{peak.emotion} 반응</span>
+                            <span className="text-xs text-muted-foreground ml-auto">({peak.timeRange})</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {peak.trigger} 시점에서 {peak.description}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            <span className="font-semibold text-foreground">음성 특징:</span> {peak.voiceFeatures}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. 상담 제안 */}
+                {analysis?.suggestions && (
+                  <div className="bg-card border border-border rounded-xl overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-border bg-amber-50">
+                      <h4 className="font-bold text-foreground">
+                        {analysis.suggestions.title}
+                      </h4>
+                    </div>
+                    <div className="p-5">
+                      <ul className="space-y-2.5">
+                        {analysis.suggestions.items.map((item: string, i: number) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2.5">
+                            <span className="text-primary mt-0.5 shrink-0">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
+          </div>
         </section>
       </main>
     </div>

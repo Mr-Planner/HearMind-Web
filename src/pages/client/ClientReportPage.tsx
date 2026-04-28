@@ -107,10 +107,10 @@ function ClientReportPage() {
     labels: emotionTrend.labels,
     datasets: [
       {
-        label: '불안',
-        data: emotionTrend.anxiety,
-        borderColor: '#818cf8',
-        backgroundColor: 'rgba(129, 140, 248, 0.1)',
+        label: '중립',
+        data: emotionTrend.neutral,
+        borderColor: '#a78bfa',
+        backgroundColor: 'rgba(167, 139, 250, 0.1)',
         tension: 0.4,
         pointRadius: 4,
       },
@@ -131,8 +131,8 @@ function ClientReportPage() {
         pointRadius: 4,
       },
       {
-        label: '기쁨',
-        data: emotionTrend.joy,
+        label: '행복',
+        data: emotionTrend.happiness,
         borderColor: '#fbbf24',
         backgroundColor: 'rgba(251, 191, 36, 0.1)',
         tension: 0.4,
