@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "../../components/Toast";
 import { useAuthStore } from "../../store/auth/authStore";
 
 const LoginPage = () => {
@@ -22,17 +23,18 @@ const LoginPage = () => {
       e.preventDefault();
 
       if (!email.trim() || !password.trim()) {
-        alert("아이디와 비밀번호를 입력해주세요.");
+        toast.info("아이디와 비밀번호를 입력해주세요.");
         return;
       }
 
       try {
         setLoading(true);
         await login(email, password); // zustand 액션
+        toast.success("로그인 성공!");
         navigate("/"); // 성공 후 홈 페이지 리다이렉션
       } catch (error) {
         console.error(error);
-        alert("로그인에 실패했습니다. 아이디/비밀번호를 확인해주세요.");
+        toast.error("로그인에 실패했습니다. 아이디/비밀번호를 확인해주세요.");
       } finally {
         setLoading(false);
       }

@@ -1,297 +1,269 @@
-import dayjs from 'dayjs';
-import 'dayjs/locale/ko';
 import { useEffect, useRef, useState } from 'react';
-import { FaCheck, FaPause, FaStop, FaXmark } from "react-icons/fa6";
+import { FaCloudUploadAlt, FaFileAudio, FaTrash } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
+import ClientSelectModal from '../../components/ClientSelectModal';
 import SavePopup from '../../components/SavePopup';
-import { BASE_URL, uploadSpeech } from '../../service/speechApi';
+import { toast } from '../../components/Toast';
+import { uploadSpeech, BASE_URL } from '../../service/speechApi';
 import { useAuthStore } from '../../store/auth/authStore';
+import type { Folder } from '../../store/folder/folderStore';
 
-dayjs.locale('ko');
-
-const RecordingPage = () => {
-  const [recordingState, setRecordingState] = useState('idle'); // 'idle' | 'recording' | 'paused' | 'stopped'
-  const [duration, setDuration] = useState(0);
-  // 컴포넌트 마운트 시점의 시간을 고정값으로 사용
-  const [createdTime] = useState(() => 
-    `${dayjs().locale('ko').format('YYYY년 M월 D일 dddd')} ${dayjs().locale('en').format('hh:mm A')}`
-  );
-
-  // Save Popup State
+const UploadPage = () => {
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isSavePopupOpen, setIsSavePopupOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  // Recording Refs
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
+  // 내담자 선택 상태
+  const [showClientModal, setShowClientModal] = useState(true);
+  const [selectedClient, setSelectedClient] = useState<Folder | null>(null);
 
-  // RecordingState에 따른 타이머 수행
+  // 진입 시 항상 팝업 열기
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined; // 타이머 ID 변수 (clearInterval을 위해)
+    setShowClientModal(true);
+  }, []);
 
-    if (recordingState === 'recording') {
-      interval = setInterval(() => {
-        setDuration((prev) => prev + 1);
-      }, 1000);
+  const handleClientSelect = (client: Folder) => {
+    setSelectedClient(client);
+    setShowClientModal(false);
+  };
+
+  const handleFileSelect = (file: File) => {
+    const allowedTypes = ['audio/webm', 'audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/m4a', 'audio/x-m4a'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(webm|wav|mp3|ogg|m4a)$/i)) {
+      toast.error('지원되는 음성 파일 형식: WAV, MP3, WebM, OGG, M4A');
+      return;
     }
-
-    return () => clearInterval(interval);
-  }, [recordingState]);
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    setSelectedFile(file);
   };
 
-  // functions
-  const handleRecord = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.start();
-      setRecordingState('recording');
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert("마이크 권한이 필요합니다.");
-    }
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
   };
 
-  const handlePause = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.pause();
-      setRecordingState('paused');
-    }
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
   };
 
-  const handleResume = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "paused") {
-      mediaRecorderRef.current.resume();
-      setRecordingState('recording');
-    }
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
   };
 
-  const handleStop = () => {
-    if (mediaRecorderRef.current && (mediaRecorderRef.current.state === "recording" || mediaRecorderRef.current.state === "paused")) {
-      mediaRecorderRef.current.stop();
-      // 스트림 트랙 중지 (마이크 끄기)
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track: MediaStreamTrack) => track.stop());
-      }
-      setRecordingState('stopped');
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
   };
 
-  const handleCancel = () => {
-    setRecordingState('idle');
-    setDuration(0);
-    audioChunksRef.current = [];
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
-  
-  const handleSave = () => {
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleStartAnalysis = () => {
+    if (!selectedFile) return;
     setIsSavePopupOpen(true);
   };
 
-  const [uploadProgress, setUploadProgress] = useState(0); // 0~100
-  const navigate = useNavigate();
-
   const onSave = async (title: string, folderId: string | number) => {
+    if (!selectedFile) return;
+
     try {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-      const audioFile = new File([audioBlob], "recording.webm", { type: 'audio/webm' });
-
       const formData = new FormData();
-      formData.append("file", audioFile);
+      formData.append("file", selectedFile);
       formData.append("name", title);
-      formData.append("category_id", folderId.toString()); // 0 또는 폴더 ID 전송
+      formData.append("category_id", folderId.toString());
 
-      console.log("Saving Speech:", {
-        name: title,
-        category_id: folderId,
-        fileSize: audioFile.size
-      });
-
-      // 업로드 요청 (진행률 콜백 제거 - SSE로 대체)
-      // 1. SSE 연결 설정
       const userId = useAuthStore.getState().userId;
       if (!userId) {
-        alert("로그인이 필요합니다.");
+        toast.error("로그인이 필요합니다.");
         return;
       }
-      setUploadProgress(10); // 초기값 10% (분석 시작)
+
+      setUploadProgress(10);
 
       const eventSource = new EventSource(`${BASE_URL}/voice/progress/${userId}`);
-      console.log("SSE Connected to:", `${BASE_URL}/voice/progress/${userId}`);
 
-      // SSE 연결이 열릴 때까지 기다리는 Promise
-      const waitForConnection = new Promise<void>((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-             // 연결이 안되더라도 일단 업로드는 진행하도록 resolve
-             console.warn("SSE Connection Timeout - proceeding with upload anyway");
-             resolve();
-        }, 5000);
-
-        eventSource.onopen = () => {
-          console.log("SSE Connection Opened");
-          clearTimeout(timeoutId); // 타임아웃 해제
-          resolve();
-        };
-        
-        eventSource.onerror = (err) => {
-          console.error("SSE Connection Error:", err);
-          // 에러 발생 시에도 타임아웃 해제하고 진행
-          clearTimeout(timeoutId);
-          reject(err);
-        };
+      const waitForConnection = new Promise<void>((resolve) => {
+        const timeoutId = setTimeout(() => { resolve(); }, 5000);
+        eventSource.onopen = () => { clearTimeout(timeoutId); resolve(); };
+        eventSource.onerror = () => { clearTimeout(timeoutId); resolve(); };
       });
 
       eventSource.onmessage = (event) => {
-        console.log("SSE Message Received:", event.data);
         const progress = parseInt(event.data, 10);
-        
         if (!isNaN(progress)) {
-          // 0이 오더라도 최소 1%로 유지하여 로딩바가 사라지지 않게 함
+          /* 
+            [Back-end Coordination]
+            서버에서는 다음 작업 단계에 맞춰 진행률(0~100)을 전송해 주세요.
+            1~20: 파일 업로드 완료 및 서버 수신
+            21~50: STT 및 음성 특징 추출 분석
+            51~80: 감정 분석 및 타임라인 데이터 생성
+            81~99: 분석 요약 및 제안 데이터(GPT) 생성
+            100: 모든 처리 완료
+          */
           setUploadProgress(Math.max(1, progress));
-
-          if (progress === 100) {
-            console.log("SSE Progress 100%, closing connection");
-            eventSource.close();
-          }
+          if (progress === 100) eventSource.close();
         }
       };
 
-      eventSource.onerror = (err) => {
-        console.error("SSE Error:", err);
-        eventSource.close();
-      };
+      eventSource.onerror = () => { eventSource.close(); };
 
-      // 2. SSE 연결 대기 후 파일 업로드 요청
       await waitForConnection;
-      
-      // uploadSpeech는 이제 진행률 콜백 없이 호출
-      // POST 요청이 완료되면(200 OK), 이미 작업은 끝난 것임.
       const response = await uploadSpeech(formData);
-      
-      // 3. 업로드 완료 후 처리
-      // 강제로 100% UI 표시
+
       setUploadProgress(100);
-      
-      // SSE 연결 종료
       eventSource.close();
 
-      // 잠시 대기 후 이동 (사용자가 100%를 볼 수 있게)
       setTimeout(() => {
-        const newSpeechId = response.voice_id || response.id; 
-
-        alert("성공적으로 저장되었습니다.");
-        
-        setRecordingState('idle');
-        setDuration(0);
-        audioChunksRef.current = [];
+        const newSpeechId = response.voice_id || response.id;
+        toast.success("성공적으로 저장되었습니다.");
+        setSelectedFile(null);
         setUploadProgress(0);
-
-        // 상세 페이지로 이동
         navigate(`/${folderId}/${newSpeechId}`);
       }, 500);
 
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("저장에 실패했습니다.");
+      toast.error("저장에 실패했습니다. 다시 시도해주세요.");
       setUploadProgress(0);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full bg-white relative">
-      <div className="absolute top-40 text-5xl font-medium text-gray-800">
-        {createdTime}
-      </div>
+    <div className="flex flex-col items-center justify-center h-full w-full bg-background relative">
+      {/* 내담자 선택 모달 */}
+      {showClientModal && (
+        <ClientSelectModal onSelect={handleClientSelect} />
+      )}
 
-      <div className="text-6xl font-medium mb-70">
-        {formatDuration(duration)}
-      </div>
-
-      <div className="absolute bottom-20 flex items-center gap-8">
-        {recordingState === 'idle' && (
-          <button
-            onClick={handleRecord}
-            className="w-20 h-20 rounded-full border-2 border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
-          >
-            <div className="w-10 h-10 bg-[#D32F2F] rounded-full"></div>
-          </button>
-        )}
-
-        {recordingState === 'recording' && (
+      {/* 헤더 */}
+      <div className="absolute top-8 left-8 flex items-center gap-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+        >
+          ← 돌아가기
+        </button>
+        {selectedClient && (
           <>
+            <span className="text-muted-foreground/40">|</span>
             <button
-              onClick={handlePause}
-              className="w-20 h-20 rounded-full border-2 border-black flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => setShowClientModal(true)}
+              className="flex items-center gap-2 text-sm cursor-pointer group"
             >
-              <FaPause className="text-3xl text-black" />
-            </button>
-            <button
-              onClick={handleStop}
-              className="w-20 h-20 rounded-full border-2 border-black flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
-            >
-              <FaStop className="text-3xl text-black" />
-            </button>
-          </>
-        )}
-
-        {recordingState === 'paused' && (
-          <>
-            <button
-              onClick={handleResume}
-              className="w-20 h-20 rounded-full border-2 border-black flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-red-500" />
-            </button>
-            <button
-              onClick={handleStop}
-              className="w-20 h-20 rounded-full border-2 border-black flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
-            >
-              <FaStop className="text-3xl text-black" />
-            </button>
-          </>
-        )}
-
-        {recordingState === 'stopped' && (
-          <>
-            <button
-              onClick={handleCancel}
-              className="w-20 h-20 rounded-full border-2 border-black flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
-            >
-              <FaXmark className="text-4xl text-black font-bold" />
-            </button>
-            <button
-              onClick={handleSave}
-              className="w-20 h-20 rounded-full border-2 border-black flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
-            >
-              <FaCheck className="text-4xl text-black font-bold" />
+              <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center">
+                <span className="text-[#8b5cf6] font-bold text-xs">{selectedClient.name.charAt(0)}</span>
+              </div>
+              <span className="font-semibold text-foreground">{selectedClient.name}</span>
+              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">(변경)</span>
             </button>
           </>
         )}
       </div>
 
-      <SavePopup 
-        isOpen={isSavePopupOpen} 
+      <div className="w-full max-w-[520px] px-6">
+        <h1 className="text-2xl font-bold text-foreground text-center mb-2">음성 파일 업로드</h1>
+        <p className="text-sm text-muted-foreground text-center mb-8">
+          {selectedClient
+            ? <><span className="font-semibold text-[#8b5cf6]">{selectedClient.name}</span> 님의 상담 녹음 파일을 업로드하세요.</>
+            : '상담 녹음 파일을 업로드하면 AI가 자동으로 분석합니다.'
+          }
+        </p>
+
+        {/* Drag & Drop Zone */}
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !selectedFile && fileInputRef.current?.click()}
+          className={`
+            relative border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center
+            transition-all duration-200 cursor-pointer min-h-[240px]
+            ${isDragging
+              ? 'border-primary bg-primary/5 scale-[1.02]'
+              : selectedFile
+                ? 'border-border bg-card'
+                : 'border-border hover:border-primary/50 hover:bg-muted/30'
+            }
+          `}
+        >
+          {!selectedFile ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <FaCloudUploadAlt size={28} className="text-primary" />
+              </div>
+              <p className="text-foreground font-medium mb-1">파일을 드래그하여 놓으세요</p>
+              <p className="text-sm text-muted-foreground mb-4">또는 클릭하여 파일 선택</p>
+              <p className="text-xs text-muted-foreground">지원 형식: WAV, MP3, WebM, OGG, M4A</p>
+            </>
+          ) : (
+            <div className="flex items-center gap-4 w-full">
+              <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <FaFileAudio size={24} className="text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground truncate">{selectedFile.name}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {formatFileSize(selectedFile.size)} · {selectedFile.type.split('/')[1]?.toUpperCase() || '음성'}
+                </p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleRemoveFile(); }}
+                className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+              >
+                <FaTrash size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleInputChange}
+          className="hidden"
+        />
+
+        {/* Action Button */}
+        <button
+          onClick={handleStartAnalysis}
+          disabled={!selectedFile || !selectedClient}
+          className={`
+            w-full mt-6 py-3.5 rounded-xl font-semibold text-base transition-all
+            ${selectedFile && selectedClient
+              ? 'bg-primary text-white hover:bg-primary/90 cursor-pointer shadow-[0_4px_12px_rgba(196,181,253,0.4)]'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
+            }
+          `}
+        >
+          {!selectedClient ? '내담자를 먼저 선택해주세요' : !selectedFile ? '파일을 선택해주세요' : '분석 시작'}
+        </button>
+      </div>
+
+      <SavePopup
+        isOpen={isSavePopupOpen}
         onClose={() => setIsSavePopupOpen(false)}
         onSave={onSave}
-        uploadProgress={uploadProgress} // 진행률 전달
+        uploadProgress={uploadProgress}
+        defaultFolderId={selectedClient?.id}
+        defaultTitle=""
       />
     </div>
   );
 };
 
-export default RecordingPage;
+export default UploadPage;

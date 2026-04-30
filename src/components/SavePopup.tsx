@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaChevronDown, FaChevronUp, FaFolder, FaXmark } from "react-icons/fa6";
 import { useShallow } from 'zustand/react/shallow';
+import { toast } from './Toast';
 import { useFolderStore } from '../store/folder/folderStore';
 
 interface SavePopupProps {
@@ -8,10 +9,12 @@ interface SavePopupProps {
   onClose: () => void;
   onSave: (title: string, folderId: number) => void;
   uploadProgress: number;
+  defaultFolderId?: number;
+  defaultTitle?: string;
 }
 
 // todo 저장 후 redirect (완성된 녹음본으로) + 로딩률 보여주기 
-const SavePopup = ({ isOpen, onClose, onSave, uploadProgress }: SavePopupProps) => {
+const SavePopup = ({ isOpen, onClose, onSave, uploadProgress, defaultFolderId, defaultTitle }: SavePopupProps) => {
   const { folders, fetchFolders } = useFolderStore(
     useShallow((state) => ({
       folders: state.folders,
@@ -25,17 +28,17 @@ const SavePopup = ({ isOpen, onClose, onSave, uploadProgress }: SavePopupProps) 
   useEffect(() => {
     if (isOpen) {
       fetchFolders();
-      setSpeechTitle("");
-      setSelectedFolderId(0);
+      setSpeechTitle(defaultTitle ?? "");
+      setSelectedFolderId(defaultFolderId ?? 0);
       setIsFolderDropdownOpen(false);
     }
-  }, [isOpen, fetchFolders]);
+  }, [isOpen, fetchFolders, defaultFolderId, defaultTitle]);
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
     if (!speechTitle.trim()) {
-      alert("제목을 입력해주세요.");
+      toast.info("제목을 입력해주세요.");
       return;
     }
     // 0(모든 Speech) 또는 특정 폴더 ID 전송
@@ -129,7 +132,22 @@ const SavePopup = ({ isOpen, onClose, onSave, uploadProgress }: SavePopupProps) 
           {uploadProgress > 0 ? (
             <div className="w-full">
               <div className="flex justify-between mb-1">
-                <span className="text-sm font-medium text-[#4687e1]">업로드 중...</span>
+                {/* 
+                  [Back-end Coordination]
+                  사용자에게 작업 단계를 시각화하기 위해 아래와 같이 진행률 구간을 나눕니다.
+                  - 1~20%: 파일 업로드 (File Uploading)
+                  - 21~50%: STT 및 음성 데이터 분석 (Analyzing Voice Data)
+                  - 51~80%: 감정 변화 추이 및 지표 계산 (Calculating Emotion Trends)
+                  - 81~99%: 분석 리포트 및 제안 생성 (Generating Analysis Report)
+                  - 100%: 완료 (Complete)
+                */}
+                <span className="text-sm font-medium text-[#4687e1]">
+                  {uploadProgress <= 20 && "파일 업로드 중..."}
+                  {uploadProgress > 20 && uploadProgress <= 50 && "음성 데이터 분석 중..."}
+                  {uploadProgress > 50 && uploadProgress <= 80 && "감정 변화 추이 계산 중..."}
+                  {uploadProgress > 80 && uploadProgress < 100 && "분석 리포트 생성 중..."}
+                  {uploadProgress >= 100 && "분석 완료!"}
+                </span>
                 <span className="text-sm font-medium text-[#4687e1]">{uploadProgress}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">

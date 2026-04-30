@@ -5,10 +5,10 @@ import App from "./App";
 // Pages
 import LoginPage from "./pages/auth/LoginPage";
 import SignUpPage from "./pages/auth/SignUpPage";
-import HomePage from "./pages/home/HomePage";
-import SettingPage from "./pages/home/SettingPage";
+import ClientReportPage from "./pages/client/ClientReportPage";
 import SpeechDetailPage from "./pages/counseling/AnalysisPage";
-import RecordingPage from "./pages/counseling/UploadPage";
+import UploadPage from "./pages/counseling/UploadPage";
+import HomePage from "./pages/home/HomePage";
 
 
 const router = createBrowserRouter([
@@ -19,34 +19,23 @@ const router = createBrowserRouter([
       // 1) 기본 홈 (/)
       { index: true, element: <HomePage /> },
 
-      // 2) /:folderId
+      // 2) /:folderId (내담자별 상담 목록)
       { path: ":folderId", element: <HomePage /> },
 
-      // 3) /:folderId/:speechId
+      // 3) /:folderId/:speechId (상담 상세 분석)
       { path: ":folderId/:speechId", element: <SpeechDetailPage /> },
 
+      // 4) /client/:clientId (내담자 감정 분석 리포트)
+      { path: "client/:clientId", element: <ClientReportPage /> },
 
-
-      // 5) /setting
-      { path: "setting", element: <SettingPage /> },
+      // 5) /upload (음성 파일 업로드)
+      { path: "upload", element: <UploadPage /> },
 
       // 6) /login
       { path: "login", element: <LoginPage /> },
 
       // 7) /sign-up
       { path: "sign-up", element: <SignUpPage /> },
-
-      // 8) /recording
-      { path: "recording", element: <RecordingPage /> },
-
-      // 9) /:folderId/:speechId/feedback
-      // { path: ":folderId/:speechId/feedback", element: <FeedbackPage /> },
-
-      // 10) /:folderId/:speechId/result
-      // { path: ":folderId/:speechId/result", element: <ResultPage /> },
-
-      // 11) /voice/:voiceId/result (최종 제출 결과 페이지)
-      // { path: "voice/:voiceId/result", element: <ResultPage /> },
     ],
   },
 ]);

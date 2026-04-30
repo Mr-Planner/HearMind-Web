@@ -4,6 +4,16 @@ import { createFolder, deleteFolderById, fetchFolders, updateFolder } from '../.
 export interface Folder {
   id: number;
   name: string;
+  age?: number;
+  gender?: string;
+  totalSessions?: number;
+  lastSession?: string;
+}
+
+export interface NewClientPayload {
+  name: string;
+  age?: number;
+  gender?: string;
 }
 
 export interface FolderState {
@@ -11,8 +21,8 @@ export interface FolderState {
   isLoading: boolean;
   error: string | null;
   fetchFolders: () => Promise<void>;
-  addFolder: (name: string) => Promise<Folder>;
-  updateFolder: (id: number, name: string) => Promise<Folder>;
+  addFolder: (payload: NewClientPayload) => Promise<Folder>;
+  updateFolder: (id: number, payload: NewClientPayload) => Promise<Folder>;
   deleteFolder: (id: number) => Promise<void>;
 }
 
@@ -21,7 +31,7 @@ export const useFolderStore = create<FolderState>((set) => ({
   isLoading: false,
   error: null,
 
-  // 폴더 목록 불러오기
+  // 폴더(내담자) 목록 불러오기
   fetchFolders: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -32,13 +42,13 @@ export const useFolderStore = create<FolderState>((set) => ({
     }
   },
 
-  // 폴더 추가
-  addFolder: async (name) => {
+  // 내담자 추가 (이름 + 나이 + 성별 + 메모)
+  addFolder: async (payload) => {
     set({ isLoading: true, error: null });
     try {
-      const newFolder = await createFolder(name);
+      const newFolder = await createFolder(payload);
       set((state) => ({ 
-        folders: [newFolder, ...state.folders],
+        folders: [...state.folders, newFolder],
         isLoading: false 
       }));
       return newFolder;
@@ -49,10 +59,10 @@ export const useFolderStore = create<FolderState>((set) => ({
   },
 
   // 폴더 수정
-  updateFolder: async (id, name) => {
+  updateFolder: async (id, payload) => {
     set({ isLoading: true, error: null });
     try {
-      const updatedFolder = await updateFolder(id, name);
+      const updatedFolder = await updateFolder(id, payload);
       set((state) => ({
         folders: state.folders.map((f) => (f.id === id ? updatedFolder : f)),
         isLoading: false

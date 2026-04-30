@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "../../components/Toast";
 import { checkEmailRequest } from "../../service/authApi";
 import { useAuthStore } from "../../store/auth/authStore";
 
@@ -17,16 +18,16 @@ const SignUpPage = () => {
 
   const handleDuplicateCheck = async () => {
     if (!email.trim()) {
-        alert("이메일을 입력해주세요.");
+        toast.info("이메일을 입력해주세요.");
         return;
     }
 
     try {
         await checkEmailRequest(email);
-        alert("사용 가능한 이메일입니다.");
+        toast.success("사용 가능한 이메일입니다.");
         setIsEmailChecked(true);
     } catch (error: any) {
-        alert(error.message);
+        toast.error(error.message);
         setIsEmailChecked(false);
     }
   };
@@ -35,27 +36,27 @@ const SignUpPage = () => {
     e.preventDefault();
 
     if (!isEmailChecked) {
-        alert("이메일 중복 확인을 해주세요.");
+        toast.info("이메일 중복 확인을 해주세요.");
         return;
     }
 
     if (!email.trim() || !password.trim() || !passwordCheck.trim() || !name.trim()) {
-      alert("필수 입력값을 모두 입력해주세요.");
+      toast.info("필수 입력값을 모두 입력해주세요.");
       return;
     }
 
     if (password !== passwordCheck) {
-      alert("비밀번호가 일치하지 않습니다.");
+      toast.error("비밀번호가 일치하지 않습니다.");
       return;
     }
 
     try {
       await signup(email, password, name, gender);
-      alert("회원가입이 완료되었습니다. 로그인해주세요.");
+      toast.success("회원가입이 완료되었습니다. 로그인해주세요.");
       navigate("/login");
     } catch (error: any) {
       console.error(error);
-      alert(error.message);
+      toast.error(error.message);
     }
   };
 

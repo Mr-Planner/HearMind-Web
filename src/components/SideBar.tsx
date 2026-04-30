@@ -7,11 +7,13 @@ import archive from "../assets/sidebar/archive.svg";
 import folderIcon from "../assets/sidebar/folder.svg";
 import hideside from "../assets/sidebar/hideside.svg";
 import overflowMenu from "../assets/sidebar/overflow-menu.svg";
-import plus from "../assets/sidebar/plus.svg";
+
 
 
 
 import { useShallow } from 'zustand/react/shallow';
+import ConfirmModal from "./ConfirmModal";
+import { toast } from "../components/Toast";
 import { useAuthStore } from "../store/auth/authStore";
 import { useFolderStore } from "../store/folder/folderStore";
 
@@ -20,12 +22,11 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
     const navigate = useNavigate();
 
     const isLoggedIn = useAuthStore((state: any) => state.isLoggedIn);
-    const { folders, fetchFolders, addFolder: storeAddFolder,
+    const { folders, fetchFolders,
         updateFolder: storeUpdateFolder, deleteFolder: storeDeleteFolder } = useFolderStore(
         useShallow((state) => ({
             folders: state.folders,
             fetchFolders: state.fetchFolders,
-            addFolder: state.addFolder,
             updateFolder: state.updateFolder,
             deleteFolder: state.deleteFolder,
         }))
@@ -38,10 +39,26 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
     // state
     const [isFolderOpen, setIsFolderOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | number | null>(null);
-    const [addingId, setAddingId] = useState<string | null>(null);
-    const [tempFolderName, setTempFolderName] = useState("");
-    // 기존 폴더 수정, 삭제용 state
-    const [renamingId, setRenamingId] = useState<number | null>(null); 
+    const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+    // 메뉴 바깥 클릭 시 닫기 로직
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            // 클릭된 요소가 메뉴 컨테이너 내부가 아니면 닫음
+            if (!target.closest('.overflow-menu-container')) {
+                setEditingId(null);
+            }
+        };
+
+        if (editingId !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [editingId]);
 
     // function
     const handleNavigation = (path: string) => {
@@ -52,93 +69,21 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
         }
     };
 
-    const toggleFolders = async() => {
-        setIsFolderOpen(prev => !prev);
-        setAddingId(null);
-        setEditingId(null); // 수정/삭제 버튼 안뜨도록 
-        setRenamingId(null);
-        setTempFolderName("");
-
-    }
-
-    // 폴더 추가 시에 임시 입력칸을 만드는 함수
-    const addFolder = () => {
-        setIsFolderOpen(true);
-        setAddingId("temp-new-id"); // 임시 ID
-        setTempFolderName(""); 
-    }
-
-    const saveFolderName = async () => {
-        const trimmed = tempFolderName.trim();
-
-        if (trimmed === "") {
-            alert("폴더 이름을 입력하세요");
-            return;
-        }
-
-        if (folders.some(folder => folder.name === trimmed)) {
-            alert("중복된 폴더 이름입니다");
-            return;
-        }
-
-        try {
-            // 서버에 폴더 추가 요청
-            await storeAddFolder(trimmed);
-            setAddingId(null);
-            setTempFolderName("");
-        } catch (e) {
-            console.error(e);
-            alert("폴더 추가 실패");
-        }
+    const deleteFolder = (id: string | number) => {
+        setDeleteConfirmId(Number(id));
     };
 
-    const cancelFolderName = () => {
-        setAddingId(null); 
-        setTempFolderName("");
-    }
-
-    const modifyFolder = (targetId: string | number) => {
-        // 한번 더 클릭하면 안보이도록
-        setEditingId(prev => prev===targetId ? null : targetId);
-        
-    }
-
-    const startRename = (targetId: string | number, currentName: string) => {
-        setRenamingId(Number(targetId));          
-        setEditingId(null);         
-        setTempFolderName(currentName); // 기존 이름 input에 넣음
-    }
-
-    const saveRename = async (id: string | number) => {
-        const trimmed = tempFolderName.trim();
-        if (!trimmed) return alert("폴더 이름을 입력하세요");
-
-        if (folders.some(folder => folder.name === trimmed && folder.id !== id))
-            return alert("중복된 이름입니다");
-
+    const confirmDeleteFolder = async () => {
+        if (!deleteConfirmId) return;
         try {
-            await storeUpdateFolder(Number(id), trimmed);
-            setRenamingId(null);
-            setTempFolderName("");
+            await storeDeleteFolder(deleteConfirmId);
+            setEditingId(null);
+            toast.success("내담자 정보가 삭제되었습니다.");
         } catch (e) {
             console.error(e);
-            alert("폴더 수정 실패");
-        }
-    };
-
-    const cancelRename = () => {
-        setRenamingId(null); 
-        setTempFolderName("");
-    };
-
-    const deleteFolder = async (id: string | number) => {
-        if (!window.confirm("정말 삭제하시겠습니까?")) return;
-        try {
-            await storeDeleteFolder(Number(id));
-            setEditingId(null); 
-        } catch (e) {
-            console.error(e);
-            alert("폴더 삭제 실패");
+            toast.error("삭제 실패");
+        } finally {
+            setDeleteConfirmId(null);
         }
     };
 
@@ -163,12 +108,9 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                 <img src = {archive}></img>
                                 <span>모든 내담자</span>
                             </div>
-                            <div className = "flex justify-center gap-0.5">
-                                <button className = "hover:bg-sidebar-accent rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick = {addFolder} disabled = {addingId != null}>
-                                    <img src = {plus} alt = "폴더 추가"></img>
-                                </button>
-                                <button className = "hover:bg-sidebar-accent rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick = {toggleFolders}>
-                                    <img src = {isFolderOpen ? angleUp : angleRight} alt = "폴더 열기/닫기"></img>
+                            <div className="flex justify-center gap-0.5">
+                                <button className="hover:bg-sidebar-accent rounded cursor-pointer p-1 w-7 h-7 flex items-center justify-center" onClick={() => setIsFolderOpen(!isFolderOpen)}>
+                                    <img src={isFolderOpen ? angleUp : angleRight} alt="폴더 열기/닫기"></img>
                                 </button> 
                             </div>
                             
@@ -177,132 +119,44 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                         <ul className="flex flex-col gap-2 pl-6">
                             {isFolderOpen && (
                                 <>
-                                    {addingId && (
-                                        <li className="flex items-center w-full px-0.5 py-1 min-h-8 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                                            <img src={folderIcon} className="shrink-0 mr-2" alt = "폴더"/>
-                                            <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                                                <input
-                                                    autoFocus
-                                                    className="appearance-none shadow-none border border-sidebar-border bg-background text-foreground rounded px-2 py-0.5 text-sm min-w-[100px] max-w-[150px] shrink focus:outline-none focus:border-primary transition-colors"
-                                                    value={tempFolderName}
-                                                    onChange={(e) => setTempFolderName(e.target.value)}
-                                                    placeholder="폴더 이름"
-                                                    onKeyDown={(e) => {
-                                                        if (e.nativeEvent.isComposing) return; // 한글 조합 중 엔터 방지
-                                                        if (e.key === "Enter") {
-                                                            e.preventDefault();
-                                                            saveFolderName();
-                                                        }
-                                                        if (e.key === "Escape") cancelFolderName();
-                                                    }}
-                                                />
-                                                <div className="flex gap-1 shrink-0">
-                                                    <button
-                                                        className="text-primary text-xs cursor-pointer hover:bg-sidebar-accent rounded px-1"
-                                                        onClick={saveFolderName}
-                                                    >
-                                                    저장
-                                                    </button>
-                                                    <button
-                                                        className="text-muted-foreground text-xs cursor-pointer hover:bg-sidebar-accent rounded px-1"
-                                                        onClick={cancelFolderName}
-                                                    >
-                                                    취소
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </li>
-                                    )}
-
                                     {folders.map((folder) => {
-                                        const isRenaming = renamingId === folder.id;  
                                         const isMenuOpen = editingId === folder.id;
-
-                                        let content;
-
-                                        // 기존 폴더 이름 수정 
-                                        if (isRenaming) {
-                                            content = (
-                                                <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                                                <input
-                                                    autoFocus
-                                                    className="appearance-none shadow-none border border-sidebar-border bg-background text-foreground rounded px-2 py-0.5 text-sm min-w-[100px] max-w-[150px] shrink focus:outline-none focus:border-primary transition-colors"
-                                                    value={tempFolderName}
-                                                    onChange={(e) => setTempFolderName(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                    if (e.key === "Enter") saveRename(folder.id);
-                                                    if (e.key === "Escape") cancelRename();
-                                                    }}
-                                                />
-                                                <div className="flex gap-1 shrink-0">
-                                                    <button
-                                                    className="text-primary text-xs hover:bg-sidebar-accent rounded px-1"
-                                                    onClick={() => saveRename(folder.id)}
-                                                    >
-                                                    저장
-                                                    </button>
-                                                    <button
-                                                    className="text-muted-foreground text-xs hover:bg-sidebar-accent rounded px-1"
-                                                    onClick={cancelRename}
-                                                    >
-                                                    취소
-                                                    </button>
-                                                </div>
-                                                </div>
-                                            );
-                                        }
-                                        // 기본 폴더명
-                                        else {
-                                            content = (
-                                                <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                                                    <span  className="truncate max-w-[150px] ">
-                                                        {folder.name}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }
-
+                                        
                                         return (
                                             <li
                                                 key={folder.id}
                                                 className="flex items-center w-full px-0.5 py-1 min-h-8 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                                                 onClick={() => {
-                                                    if (!isRenaming && !isMenuOpen) {
+                                                    if (!isMenuOpen) {
                                                         navigate(`/${folder.id}`); // 폴더 이동 
                                                     }
                                                 }}
                                                 >
                                                 <img src={folderIcon} className="shrink-0 mr-2" alt = "폴더"/>
 
-                                                {content}
+                                                <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                                                    <span  className="truncate max-w-[150px] ">
+                                                        {folder.name}
+                                                    </span>
+                                                </div>
 
-                                                <div className="relative shrink-0 flex items-center h-full">
-
-                                                    {!isRenaming && (
+                                                <div className="relative shrink-0 flex items-center h-full overflow-menu-container">
                                                     <button
                                                         className="hover:bg-sidebar-accent rounded cursor-pointer px-2 flex items-center justify-center h-[75%]"
-
                                                         onClick={(e) => {
-                                                        e.stopPropagation();   // 해당 폴더이름으로 이동 방지
-                                                        modifyFolder(folder.id);
+                                                            e.stopPropagation();
+                                                            setEditingId(editingId === folder.id ? null : folder.id);
                                                         }}
                                                     >
                                                         <img src={overflowMenu} className="pointer-events-none w-3 h-3 " alt = "폴더 수정"/>
                                                     </button>
-                                                    )}
 
                                                     {isMenuOpen && (
                                                     <div
                                                         className="absolute top-full right-0 mt-1 z-50 flex flex-col translate-x-[55px] -translate-y-0.5
                                                                 bg-popover text-popover-foreground border border-border shadow-sm rounded text-sm w-[60px]"
-                                                        onClick={(e) => e.stopPropagation()} //  해당 폴더이름으로 이동 방지
+                                                        onClick={(e) => e.stopPropagation()}
                                                     >
-                                                        <button
-                                                            className="px-2 py-1 hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                                            onClick={() => startRename(folder.id, folder.name)}
-                                                        >
-                                                        수정
-                                                        </button>
                                                         <button
                                                             className="px-2 py-1 hover:bg-destructive hover:text-destructive-foreground cursor-pointer"
                                                             onClick={() => deleteFolder(folder.id)}
@@ -311,7 +165,6 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
                                                         </button>
                                                     </div>
                                                     )}
-
                                                 </div>
                                             </li>
                                             );
@@ -327,7 +180,16 @@ function SideBar({ handleToggleSideBar }: { handleToggleSideBar: () => void }) {
 
             </nav>
 
-           
+            <ConfirmModal
+                isOpen={deleteConfirmId !== null}
+                onClose={() => setDeleteConfirmId(null)}
+                onConfirm={confirmDeleteFolder}
+                title="내담자 삭제"
+                message="정말로 이 내담자 정보를 삭제하시겠습니까? 삭제된 정보는 복구할 수 없으며 관련된 모든 상담 기록이 삭제될 수 있습니다."
+                confirmText="삭제하기"
+                cancelText="취소"
+                type="danger"
+            />
         </aside>
     )
 }

@@ -85,3 +85,21 @@ export async function fetchSpeeches(folderId?: string | number | null): Promise<
   const data = await res.json();
   return data.voices; // { voices: [...] } 형태에서 배열만 반환
 }
+
+// 내담자 분석 리포트 조회
+export async function fetchClientReport(clientId: string | number): Promise<any> {
+  const accessToken = useAuthStore.getState().accessToken;
+
+  const res = await fetch(`${BASE_URL}/client/${clientId}/report`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch client report");
+  }
+
+  return await res.json();
+}
